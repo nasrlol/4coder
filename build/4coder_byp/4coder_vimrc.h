@@ -4,20 +4,20 @@
 #define VIM_USE_REIGSTER_BUFFER        1
 
 enum BYP_Vim_Request{
-  BYP_REQUEST_Title,
-  BYP_REQUEST_Comment,
-  BYP_REQUEST_UnComment,
+ BYP_REQUEST_Title,
+ BYP_REQUEST_Comment,
+ BYP_REQUEST_UnComment,
 
-  BYP_REQUEST_COUNT
+ BYP_REQUEST_COUNT
 };
 
 enum BYP_Vim_Objects{
-  BYP_OBJECT_param0,
-  BYP_OBJECT_param1,
-  BYP_OBJECT_camel0,
-  BYP_OBJECT_camel1,
+ BYP_OBJECT_param0,
+ BYP_OBJECT_param1,
+ BYP_OBJECT_camel0,
+ BYP_OBJECT_camel1,
 
-  BYP_OBJECT_COUNT
+ BYP_OBJECT_COUNT
 };
 #define VIM_ADDITIONAL_REQUESTS        BYP_REQUEST_COUNT
 #define VIM_ADDITIONAL_TEXT_OBJECTS    BYP_OBJECT_COUNT
@@ -28,4 +28,4 @@ enum BYP_Vim_Objects{
 
 #define VIM_USE_BOTTOM_LISTER          1
 #define VIM_LISTER_RANGE               3,5
-#define VIM_LISTER_MAX_RATIO           0.35f
+#define VIM_LISTER_MAX_RATIO           0.5f

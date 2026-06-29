@@ -1,4 +1,7 @@
-defcolor_back                       =  0xff0D1117;
+
+//- dark theme
+
+defcolor_back                       =  0xff000000;
 defcolor_margin                     =  0xFF1A1208;
 defcolor_margin_hover               =  0xFF3D2B1A;
 defcolor_margin_active              =  defcolor_margin_hover;
@@ -56,13 +59,11 @@ defcolor_control                    =  defcolor_preproc;
 defcolor_struct                     =  defcolor_keyword;
 defcolor_non_text                   =  0xFFC4A882;
 
-/// Vim Colors
 defcolor_vim_filebar_pop            =  0x0FA07850;
 defcolor_vim_chord_text             =  defcolor_text_default;
 defcolor_vim_chord_unresolved       =  defcolor_mark;
 defcolor_vim_chord_error            =  defcolor_special_character;
 
-/// Fleury Colors
 fleury_color_syntax_crap           = defcolor_non_text;
 fleury_color_operators             = defcolor_non_text;
 fleury_color_inactive_pane_overlay = 0x44000000;

@@ -173,7 +173,7 @@ F4_GetColor(Application_Links *app, ColorCtx ctx)
                         }break;
 
                         case TokenBaseKind_Preprocessor:     { FillFromFlag(F4_SyntaxFlag_Preprocessor); color = F4_ARGBFromID(table, defcolor_preproc); } break;
-                        case TokenBaseKind_Keyword:          { FillFromFlag(F4_SyntaxFlag_Keywords); color = F4_ARGBFromID(table, defcolor_keyword); } break;
+                       case TokenBaseKind_Keyword:          { FillFromFlag(F4_SyntaxFlag_Keywords); color = F4_ARGBFromID(table, defcolor_keyword); } break;
                         case TokenBaseKind_Comment:          { color = F4_ARGBFromID(table, defcolor_comment); } break;
                         case TokenBaseKind_LiteralString:    { FillFromFlag(F4_SyntaxFlag_Literals); color = F4_ARGBFromID(table, defcolor_str_constant); } break;
                         case TokenBaseKind_LiteralInteger:   { FillFromFlag(F4_SyntaxFlag_Literals); color = F4_ARGBFromID(table, defcolor_int_constant); } break;
@@ -817,7 +817,7 @@ vim_draw_filebar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fram
         Rect_f32 title_rect = bar;
         // NOTE(nasr): padding for the title rect
         // just like byp mentioned in the 4coder server
-        title_rect.x1 = bar.x0 + char_wid*unique_name.size + 0.5;
+        title_rect.x1 = (f32)(bar.x0 + char_wid*unique_name.size + 0.5);
         nasr_draw_rect(app, title_rect, 0.f, fcolor_resolve(fcolor_id(defcolor_vim_filebar_pop)));
 
         Rect_f32 triangle_rect = title_rect;
@@ -1203,4 +1203,3 @@ vim_draw_whole_screen(Application_Links *app, Frame_Info frame_info){
         }
         draw_string(app, face_id, vim_keystroke_text.string, bot_right, chord_color);
 }
-
