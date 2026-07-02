@@ -41,6 +41,8 @@ draw_circle_gradient(Application_Links *app, Vec2_f32 center, f32 radius, ARGB_C
   }
 }
 
+
+#if 0
 function Audio_Clip
 load_wav(Arena *arena, char *file_name){
   Audio_Clip result = {};
@@ -51,6 +53,7 @@ load_wav(Arena *arena, char *file_name){
   }
   return result;
 }
+#endif
 
 
 #ifndef PCG_SEED

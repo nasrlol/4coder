@@ -1,9 +1,10 @@
+#if 0
 ////////////////////////////////
 // NOTE(allen): Default Mixer Helpers
 
 // TODO(allen): intrinsics wrappers
 #if OS_LINUX
-#include <immintrin.h>
+#include "sseneon.h" 
 #define _InterlockedExchangeAdd __sync_fetch_and_add
 #elif OS_MAC
 #include <immintrin.h>
@@ -274,3 +275,5 @@ audio_clip_from_wav_file_name(Arena *arena, char *file_name){
  }
  return(result);
 }
+
+#endif

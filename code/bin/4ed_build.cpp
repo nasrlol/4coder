@@ -339,13 +339,22 @@ build(Arena *arena, u32 flags, u32 arch, char *code_path, char **code_files, cha
     fm_init_build_line(&line);
 
     switch (arch){
-        case Arch_X64:
+    case Arch_X64: {
+#if 0
         fm_add_to_line(line, "-m64");
-        fm_add_to_line(line, "-DFTECH_64_BIT"); break;
+        fm_add_to_line(line, "-DFTECH_64_BIT"); 
+#endif
 
-        case Arch_X86:
+    } break;
+
+    case Arch_X86: {
+
+#if 0
         fm_add_to_line(line, "-m32");
-        fm_add_to_line(line, "-DFTECH_32_BIT"); break;
+        fm_add_to_line(line, "-DFTECH_32_BIT"); 
+#endif
+
+    } break;
 
         default: InvalidPath;
     }
@@ -436,12 +445,16 @@ build(Arena *arena, u32 flags, u32 arch, char *code_path, char **code_files, cha
 
     switch (arch){
         case Arch_X64:
+	  #if 0
         fm_add_to_line(line, "-m64");
         fm_add_to_line(line, "-DFTECH_64_BIT"); break;
+	#endif
 
         case Arch_X86:
+	  #if 0
         fm_add_to_line(line, "-m32");
         fm_add_to_line(line, "-DFTECH_32_BIT"); break;
+	#endif
 
         default: InvalidPath;
     }

@@ -1,3 +1,5 @@
+#if 0
+
 ////////////////////////////////
 // NOTE(allen): Default Mixer Helpers
 
@@ -9,7 +11,7 @@
 #include <immintrin.h>
 #define _InterlockedExchangeAdd __sync_fetch_and_add
 #else
-#include <intrin.h>
+#include "sseneon.h"
 #endif
 
 function u32
@@ -274,3 +276,5 @@ audio_clip_from_wav_file_name(Arena *arena, char *file_name){
   }
   return(result);
 }
+
+#endif

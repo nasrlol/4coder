@@ -15,8 +15,9 @@ if [ -z "$SOURCE" ]; then
 fi
 echo SOURCE = $SOURCE
 
-opts="-Wno-write-strings -Wno-null-dereference -Wno-comment -Wno-switch -Wno-missing-declarations -Wno-logical-op-parentheses -g -DOS_LINUX=1 -DOS_WINDOWS=0 -DOS_MAC=0"
-arch=-m64
+opts="-Wno-write-strings -Wno-switch-outside-range -Wno-null-dereference -Wno-comment -Wno-switch -Wno-missing-declarations -Wno-logical-op-parentheses -g -DOS_LINUX=1 -DOS_WINDOWS=0 -DOS_MAC=0"
+
+arch=
 
 debug=-g
 

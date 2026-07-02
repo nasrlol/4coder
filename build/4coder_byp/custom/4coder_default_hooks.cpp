@@ -20,9 +20,12 @@ CUSTOM_DOC("Default command for responding to a startup event")
     }
   }
 
+  #if 0
   {
     def_audio_init();
   }
+  #endif
+
 
   {
     def_enable_virtual_whitespace = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
