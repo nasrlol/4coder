@@ -148,6 +148,7 @@ F4_Cursor_RenderEmacsStyle(Application_Links *app, View_ID view_id, b32 is_activ
     ColorFlags flags = 0;
     flags |= !!global_keyboard_macro_is_recording * ColorFlag_Macro;
     flags |= !!power_mode.enabled * ColorFlag_PowerMode;
+
     ARGB_Color cursor_color = F4_GetColor(app, ColorCtx_Cursor(flags, GlobalKeybindingMode));
     ARGB_Color mark_color = cursor_color;
     ARGB_Color inactive_cursor_color = F4_ARGBFromID(active_color_table, fleury_color_cursor_inactive, 0);

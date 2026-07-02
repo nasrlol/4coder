@@ -167,10 +167,7 @@ function void vim_default_bindings(Application_Links *app, Key_Code leader){
 	VimBind(N|V|MAP, vim_screen_top,                  (Sft|KeyCode_H));
 	VimBind(N|V|MAP, vim_screen_bot,                  (Sft|KeyCode_L));
 	VimBind(N|V|MAP, vim_screen_mid,                  (Sft|KeyCode_M));
-
-	// NOTE: cursor swapping with M
-	VimBind(N|V|MAP,   cursor_mark_swap,                     KeyCode_M);
-
+	VimBind(V|MAP,   cursor_mark_swap,                     KeyCode_O);
 	VimBind(V|MAP,   vim_block_swap,                  (Sft|KeyCode_O));
 
 	VimBind(N|V|MAP, vim_search_identifier,         (Ctl|Sft|KeyCode_8));
@@ -200,11 +197,11 @@ function void vim_default_bindings(Application_Links *app, Key_Code leader){
 	VimBind(N|V|MAP, vim_scroll_screen_bot,         SUB_Z, KeyCode_B);
 
 	/// Miscellaneous Binds
-	// VimBind(N|V|MAP, vim_set_mark,                         KeyCode_M);
-	// VimBind(N|V|MAP, vim_goto_mark,                        KeyCode_Tick);
-	// VimBind(N|V|MAP, vim_goto_mark,                        KeyCode_Quote);
-	// VimBind(N|V|MAP, vim_toggle_macro,                     KeyCode_Q);
-	// VimBind(N|V|MAP, vim_play_macro,                  (Sft|KeyCode_2));
+	VimBind(N|V|MAP, vim_set_mark,                         KeyCode_M);
+	VimBind(N|V|MAP, vim_goto_mark,                        KeyCode_Tick);
+	VimBind(N|V|MAP, vim_goto_mark,                        KeyCode_Quote);
+	VimBind(N|V|MAP, vim_toggle_macro,                     KeyCode_Q);
+	VimBind(N|V|MAP, vim_play_macro,                  (Sft|KeyCode_2));
 
 	/// Window Binds (TODO(BYP): Do the rest of these, and do them properly)
 	VimBind(N|MAP, change_active_panel_backwards,     (Ctl|KeyCode_H));

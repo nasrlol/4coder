@@ -46,7 +46,7 @@ CUSTOM_DOC("Responding to a startup event")
     }
   }
 
-  // NOTE(nasr): disable tat shit
+  // NOTE(nasr): disable audio 
   // def_audio_init();
 
   def_enable_virtual_whitespace = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
@@ -260,7 +260,7 @@ BUFFER_HOOK_SIG(byp_file_save){
   b32 auto_indent = def_get_config_b32(vars_save_string_lit("automatically_indent_text_on_save"));
   b32 is_virtual = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
   if (auto_indent && is_virtual){
-    //auto_indent_buffer(app, buffer_id, buffer_range(app, buffer_id));
+    auto_indent_buffer(app, buffer_id, buffer_range(app, buffer_id));
     byp_reformat_buffer(app, buffer_id);
   }
   b32 clear_blanks = def_get_config_b32(vars_save_string_lit("clear_blank_lines"));
@@ -316,16 +316,19 @@ BUFFER_HOOK_SIG(byp_begin_buffer){
     String_Const_u8 ext = string_file_extension(file_name);
     for (i32 i = 0; i < extensions.count; ++i){
       if (string_match(ext, extensions.strings[i])){
-        if (string_match(ext, string_u8_litexpr("cpp")) ||
-            string_match(ext, string_u8_litexpr("h")) ||
-            string_match(ext, string_u8_litexpr("c")) ||
-            string_match(ext, string_u8_litexpr("hpp")) ||
-            string_match(ext, string_u8_litexpr("rs")) ||
-            string_match(ext, string_u8_litexpr("hlsl")) ||
+        if (string_match(ext, string_u8_litexpr("cpp"))    ||
+            string_match(ext, string_u8_litexpr("h"))      ||
+            string_match(ext, string_u8_litexpr("c"))      ||
+            string_match(ext, string_u8_litexpr("hpp"))    ||
+            string_match(ext, string_u8_litexpr("rs"))     ||
+            string_match(ext, string_u8_litexpr("jr"))     ||
+            string_match(ext, string_u8_litexpr("hlsl"))   ||
             string_match(ext, string_u8_litexpr("4coder")) ||
-            string_match(ext, string_u8_litexpr("cc"))){
+            string_match(ext, string_u8_litexpr("cc"))
+	    ){
           treat_as_code = true;
         }
+	treat_as_code = true;
         break;
       }
     }

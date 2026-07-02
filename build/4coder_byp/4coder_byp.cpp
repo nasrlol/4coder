@@ -20,6 +20,15 @@ CUSTOM_ID(colors, defcolor_control);
 CUSTOM_ID(colors, defcolor_struct);
 CUSTOM_ID(colors, defcolor_non_text);
 
+CUSTOM_ID(colors, nasr_mark_color);
+CUSTOM_ID(colors, nasr_cursor_inactive);
+
+CUSTOM_ID(colors, nasr_vim_cursor_insert);
+CUSTOM_ID(colors, nasr_vim_cursor_normal);
+CUSTOM_ID(colors, nasr_vim_cursor_visual);
+
+
+
 #include "4coder_vimrc.h"
 #include "4coder_vim/4coder_vim_include.h"
 

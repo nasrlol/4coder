@@ -172,7 +172,9 @@ CUSTOM_DOC("Looks for a build.bat, build.sh, or makefile in the current and pare
   View_ID build_view = get_or_open_build_panel(app);
 
   standard_search_and_build(app, build_view, buffer);
+#if 0
   set_fancy_compilation_buffer_font(app);
+#endif
 
   block_zero_struct(&prev_location);
   lock_jump_buffer(app, string_u8_litexpr("*compilation*"));

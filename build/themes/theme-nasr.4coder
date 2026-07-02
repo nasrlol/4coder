@@ -1,5 +1,4 @@
-
-//- dark theme
+//- dark theme - Enhanced with better cursor visibility and no color conflicts
 
 defcolor_back                       =  0xff000000;
 defcolor_margin                     =  0xFF1A1208;
@@ -9,83 +8,94 @@ defcolor_list_item                  = {defcolor_margin, defcolor_back};
 defcolor_list_item_hover            = {defcolor_margin_hover, defcolor_margin};
 defcolor_list_item_active           = {defcolor_margin_active, defcolor_margin_active};
 
-defcolor_cursor                     = {0xFFF0A030, 0xFFC04018, 0xFFF0A030, 0xFFC04018};
-defcolor_at_cursor                  =  0xFF0D1117;
-defcolor_highlight_cursor_line      =  0xFF1F1610;
-defcolor_mark                       =  0xFF9B7040;
-defcolor_highlight                  =  0xFF44404F;
-defcolor_at_highlight               =  0xFF0D1117;
+defcolor_cursor                     = {0xFFFF8C00};  // Bright orange - highly visible
+defcolor_at_cursor                  = 0xFF1A0A00;   // Dark brown for text at cursor
 
-defcolor_text_default               =  0xFFC4A882;
-defcolor_comment                    =  0xFF6B5A45;
-defcolor_comment_pop                = {0xFFB87040, 0xFFC05020};
-defcolor_keyword                    =  0xFFD48B30;
+fleury_color_cursor_inactive        = 0xFF8B5A2B;   // Darker rust for inactive state
+fleury_color_cursor_macro           = defcolor_bar;
+fleury_color_cursor_power_mode      = 0xFFFF8C00;   // Match main cursor
 
-defcolor_str_constant               =  0xFFB86030;
-defcolor_char_constant              =  0xFFB86030;
+defcolor_highlight_cursor_line      = 0xFF2A1F15;   // Slightly lighter background for cursor line
+
+nasr_mark_color                     = 0xFFB8860B;   // Darker goldenrod - distinct from cursor
+nasr_cursor_inactive                = 0xFF8B5A2B;   // Consistent with fleury_color_cursor_inactive
+
+nasr_vim_cursor_insert              = 0xFFD79921 ;  // muted amber (gruvbox yellow) - insert mode
+nasr_vim_cursor_normal              = 0xFFCC6633 ;  // burnt orange - normal mode
+nasr_vim_cursor_visual              = 0xFF83A598 ;  // dusty blue - visual mode (cool accent for contrast)
+
+defcolor_mark                       =  0xFFB8860B;   // Darkened goldenrod, distinct from cursor
+defcolor_highlight                  =  0xFF3A3530;   // Slightly warmer gray (was too purple)
+defcolor_at_highlight               =  0xFF151008;   // Proper contrast
+
+defcolor_text_default               =  0xFFD4B896;   // Slightly lighter for better readability (was 0xFFC4A882)
+defcolor_comment                    =  0xFF7A6A55;   // Lightened from 0xFF6B5A45 for visibility
+defcolor_comment_pop                = {0xFFC48050, 0xFFD46830};  // Brighter orange-reds, better contrast
+
+defcolor_keyword                    =  0xFFE5A035;   // Brighter yellow-orange (was 0xFFD48B30)
+
+defcolor_str_constant               =  0xFFC87040;   // Distinct from comment_pop
+defcolor_char_constant              =  0xFFC87040;   // Match str_constant
 defcolor_include                    =  defcolor_str_constant;
-defcolor_int_constant               =  0xFFC84820;
-defcolor_float_constant             =  0xFFD06040;
-defcolor_bool_constant              =  0xFF9B7040;
-defcolor_preproc                    =  0xFFB85028;
-defcolor_special_character          =  0xFFDC4A20;
-defcolor_ghost_character            =  0xFF4A2A10;
+defcolor_int_constant               =  0xFFD85830;   // Brighter, distinct
+defcolor_float_constant             =  0xFFE07050;   // Distinct from int_constant
+defcolor_bool_constant              =  0xFFB8860B;   // Goldenrod - same as mark for semantic consistency
+defcolor_preproc                    =  0xFFC56028;   // Distinct from bool_constant
+defcolor_special_character          =  0xFFFF6B35;   // Bright red-orange - POPS
+defcolor_ghost_character            =  0xFF5A3A20;   // Darker, not hidden
 
-defcolor_paste                      =  0xFF6B3A20;
-defcolor_undo                       =  0xFF9B7040;
+defcolor_paste                      =  0xFF7A4A30;   // Lightened from 0xFF6B3A20
+defcolor_undo                       =  0xFFB8860B;   // Goldenrod - matches mark
 
-defcolor_highlight_junk             =  0xFF3A0A00;
-defcolor_highlight_white            =  0xFF1F1508;
+defcolor_highlight_junk             =  0xFF4A1A00;   // Darker, more visible
+defcolor_highlight_white            =  0xFF2A1A10;   // Darker for contrast
 
-defcolor_bar                        =  0xFF1F1610;
-defcolor_base                       =  0xFF8B7355;
-defcolor_pop1                       =  0xFFC4A882;
-defcolor_pop2                       =  0xFFC84820;
+defcolor_bar                        =  0xFF2A2218;   // Lightened slightly from 0xFF1F1610
+defcolor_base                       =  0xFF9A8360;   // Warmer, slightly lighter
+defcolor_pop1                       =  0xFFD4B896;   // Match text_default for consistency
+defcolor_pop2                       =  0xFFD85830;   // Match int_constant
 
-defcolor_back_cycle                 = {0xFF150F0A, 0xFF150F0A};
-defcolor_text_cycle                 = {0xFFDC4A20, 0xFF9B7040, 0xFFB87040, 0xFFD4A030};
+defcolor_back_cycle                 = {0xFF1A140F, 0xFF1A140F};  // Slightly lighter for better contrast
+defcolor_text_cycle                 = {0xFFFF6B35, 0xFFB8860B, 0xFFC48050, 0xFFE5A035};
 
-defcolor_line_numbers_back          =  0xFF241A10;
-defcolor_line_numbers_text          =  0xFF5A4A38;
+defcolor_line_numbers_back          =  0xFF2A2010;   // Lightened from 0xFF241A10
+defcolor_line_numbers_text          =  0xFF6A5A48;   // Lightened from 0xFF5A4A38
 
 /// BYP Colors
-defcolor_function                   =  0xFFA07850;
-defcolor_type                       =  0xFFB87040;
-defcolor_primitive                  =  0xFFB87040;
-defcolor_macro                      =  0xFFC05020;
-defcolor_enum                       =  0xFFD4A030;
-defcolor_global                     =  0xFF8B6040;
+defcolor_function                   =  0xFFB08860;   // Lightened, distinct
+defcolor_type                       =  0xFFC48050;   // Distinct from function
+defcolor_primitive                  =  0xFFC48050;   // Match type
+defcolor_macro                      =  0xFFD46830;   // Brighter, distinct from preproc
+defcolor_enum                       =  0xFFE5A035;   // Match keyword
+defcolor_global                     =  0xFF9B7050;   // Distinct from function
 defcolor_control                    =  defcolor_preproc;
 defcolor_struct                     =  defcolor_keyword;
-defcolor_non_text                   =  0xFFC4A882;
+defcolor_non_text                   =  0xFFD4B896;   // Match text_default
 
-defcolor_vim_filebar_pop            =  0x0FA07850;
+defcolor_vim_filebar_pop            =  0x0FB08860;   // Alpha + function color
 defcolor_vim_chord_text             =  defcolor_text_default;
 defcolor_vim_chord_unresolved       =  defcolor_mark;
-defcolor_vim_chord_error            =  defcolor_special_character;
+defcolor_vim_chord_error            =  0xFFFF6B35;   // Match special_character
 
 fleury_color_syntax_crap           = defcolor_non_text;
 fleury_color_operators             = defcolor_non_text;
 fleury_color_inactive_pane_overlay = 0x44000000;
-fleury_color_inactive_pane_background = 0xff0D1117;
-fleury_color_file_progress_bar     = 0x60D48B30;
-fleury_color_brace_highlight       = { defcolor_preproc };
-fleury_color_brace_line            = { 0x806B5A45 };
-fleury_color_brace_annotation      = { 0x806B5A45 };
+fleury_color_inactive_pane_background = 0xff151008;  // Slightly lighter (was 0xff0D1117)
+fleury_color_file_progress_bar     = 0x60E5A035;    // Bright yellow-orange progress
+fleury_color_brace_highlight       = { 0xFFE5A035 };  // Match keyword for visibility
+fleury_color_brace_line            = { 0x806B5A45 };  // Kept as-is (semi-transparent)
+fleury_color_brace_annotation      = { 0x906B5A45 };  // Slightly more opaque than before
 fleury_color_index_product_type    = defcolor_type;
 fleury_color_index_sum_type        = defcolor_type;
 fleury_color_index_function        = defcolor_function;
 fleury_color_index_macro           = defcolor_macro;
 fleury_color_index_constant        = defcolor_enum;
-fleury_color_index_comment_tag     = 0xffDC4A20;
-fleury_color_index_decl            = 0xFFB87040;
-fleury_color_cursor_macro          = defcolor_bar;
-fleury_color_cursor_power_mode     = defcolor_bar;
-fleury_color_cursor_inactive       = 0x446B3A00;
-fleury_color_plot_cycle            = { 0xffB87040, 0xffD4A030, 0xffC05020, 0xffB85028 };
+fleury_color_index_comment_tag     = 0xffFF6B35;    // Match special_character - eye-catching
+fleury_color_index_decl            = 0xFFC48050;    // Distinct
+fleury_color_plot_cycle            = { 0xffC48050, 0xffE5A035, 0xffD46830, 0xffC56028 };
 fleury_color_token_highlight       = defcolor_margin_hover;
 fleury_color_token_minor_highlight = defcolor_bar;
-fleury_color_error_annotation      = 0xffDC4A20;
-fleury_color_lego_grab             = 0xff8B6040;
-fleury_color_lego_splat            = 0xffB87040;
-fleury_color_comment_user_name     = 0xffff0000;
+fleury_color_error_annotation      = 0xffFF6B35;   // Match special_character & comment_tag
+fleury_color_lego_grab             = 0xff9B7050;   // Distinct from global
+fleury_color_lego_splat            = 0xFFC48050;   // Distinct
+fleury_color_comment_user_name     = 0xffFF6B35;   // Bright red-orange - eye-catching

@@ -1,5 +1,5 @@
 
-#define VIM_DO_ANIMATE                 1
+#define VIM_DO_ANIMATE                 0
 #define VIM_USE_TRADITIONAL_CHORDS     0
 #define VIM_USE_REIGSTER_BUFFER        1
 
@@ -27,5 +27,5 @@ enum BYP_Vim_Objects{
 #define VIM_DEFAULT_REGISTER           unnamed
 
 #define VIM_USE_BOTTOM_LISTER          1
-#define VIM_LISTER_RANGE               3,5
+#define VIM_LISTER_RANGE               5,5
 #define VIM_LISTER_MAX_RATIO           0.5f

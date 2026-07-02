@@ -327,8 +327,11 @@ byp_draw_comments(Application_Links *app, Buffer_ID buffer, Text_Layout_ID text_
   b32 use_comment_keyword = def_get_config_b32(vars_save_string_lit("use_comment_keyword"));
   if (use_comment_keyword){
     Comment_Highlight_Pair pairs[] = {
-      {string_u8_litexpr("NOTE"), finalize_color(defcolor_comment_pop, 0)},
-      {string_u8_litexpr("TODO"), finalize_color(defcolor_comment_pop, 1)},
+      {string_u8_litexpr("NOTE"),  finalize_color(defcolor_comment_pop, 0)},
+      {string_u8_litexpr("TODO"),  finalize_color(defcolor_comment_pop, 1)},
+      {string_u8_litexpr("DEBUG"), finalize_color(defcolor_comment_pop, 1)},
+      {string_u8_litexpr("ISSUE"), finalize_color(defcolor_comment_pop, 1)},
+      {string_u8_litexpr("FIX"),   finalize_color(defcolor_comment_pop, 1)},
     };
     draw_comment_highlights(app, buffer, text_layout_id, array, pairs, ArrayCount(pairs));
   }
