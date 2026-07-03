@@ -1,6 +1,8 @@
 //- dark theme - Enhanced with better cursor visibility and no color conflicts
 
-defcolor_back                       =  0xff000000;
+defcolor_back                       =  0xff111111;
+defcolor_back_cycle                 = {0x42222222,  0x43111111};  // Slightly lighter for better contrast
+
 defcolor_margin                     =  0xFF1A1208;
 defcolor_margin_hover               =  0xFF3D2B1A;
 defcolor_margin_active              =  defcolor_margin_hover;
@@ -8,8 +10,8 @@ defcolor_list_item                  = {defcolor_margin, defcolor_back};
 defcolor_list_item_hover            = {defcolor_margin_hover, defcolor_margin};
 defcolor_list_item_active           = {defcolor_margin_active, defcolor_margin_active};
 
-defcolor_cursor                     = {0xFFFF8C00};  // Bright orange - highly visible
-defcolor_at_cursor                  = 0xFF1A0A00;   // Dark brown for text at cursor
+defcolor_cursor                     = {0xFF83A598};  // Bright orange - highly visible
+defcolor_at_cursor                  = 0xFF99999f;   // Dark brown for text at cursor
 
 fleury_color_cursor_inactive        = 0xFF8B5A2B;   // Darker rust for inactive state
 fleury_color_cursor_macro           = defcolor_bar;
@@ -20,17 +22,19 @@ defcolor_highlight_cursor_line      = 0xFF2A1F15;   // Slightly lighter backgrou
 nasr_mark_color                     = 0xFFB8860B;   // Darker goldenrod - distinct from cursor
 nasr_cursor_inactive                = 0xFF8B5A2B;   // Consistent with fleury_color_cursor_inactive
 
-nasr_vim_cursor_insert              = 0xFFD79921 ;  // muted amber (gruvbox yellow) - insert mode
+nasr_vim_cursor_insert              = 0xFF83A598 ;  // muted amber (gruvbox yellow) - insert mode
 nasr_vim_cursor_normal              = 0xFFCC6633 ;  // burnt orange - normal mode
-nasr_vim_cursor_visual              = 0xFF83A598 ;  // dusty blue - visual mode (cool accent for contrast)
+nasr_vim_cursor_visual              = 0xFFD79921;  // dusty blue - visual mode (cool accent for contrast)
 
 defcolor_mark                       =  0xFFB8860B;   // Darkened goldenrod, distinct from cursor
 defcolor_highlight                  =  0xFF3A3530;   // Slightly warmer gray (was too purple)
 defcolor_at_highlight               =  0xFF151008;   // Proper contrast
 
-defcolor_text_default               =  0xFFD4B896;   // Slightly lighter for better readability (was 0xFFC4A882)
+defcolor_text_default               =  0xFFc4a882;   // Slightly lighter for better readability (was 0xFFC4A882)
+defcolor_text_cycle                 = {0xFFFF6B35, 0xFFB8860B, 0xFFC48050, 0xFFE5A035};
+
 defcolor_comment                    =  0xFF7A6A55;   // Lightened from 0xFF6B5A45 for visibility
-defcolor_comment_pop                = {0xFFC48050, 0xFFD46830};  // Brighter orange-reds, better contrast
+defcolor_comment_pop                = {0xFF048050, 0xFF046830};  // Brighter orange-reds, better contrast
 
 defcolor_keyword                    =  0xFFE5A035;   // Brighter yellow-orange (was 0xFFD48B30)
 
@@ -55,8 +59,7 @@ defcolor_base                       =  0xFF9A8360;   // Warmer, slightly lighter
 defcolor_pop1                       =  0xFFD4B896;   // Match text_default for consistency
 defcolor_pop2                       =  0xFFD85830;   // Match int_constant
 
-defcolor_back_cycle                 = {0xFF1A140F, 0xFF1A140F};  // Slightly lighter for better contrast
-defcolor_text_cycle                 = {0xFFFF6B35, 0xFFB8860B, 0xFFC48050, 0xFFE5A035};
+
 
 defcolor_line_numbers_back          =  0xFF2A2010;   // Lightened from 0xFF241A10
 defcolor_line_numbers_text          =  0xFF6A5A48;   // Lightened from 0xFF5A4A38
@@ -92,7 +95,7 @@ fleury_color_index_macro           = defcolor_macro;
 fleury_color_index_constant        = defcolor_enum;
 fleury_color_index_comment_tag     = 0xffFF6B35;    // Match special_character - eye-catching
 fleury_color_index_decl            = 0xFFC48050;    // Distinct
-fleury_color_plot_cycle            = { 0xffC48050, 0xffE5A035, 0xffD46830, 0xffC56028 };
+fleury_color_plot_cycle            = { 0xffC48050, 0xffE5A035, 0xffD06830, 0xffC56028 };
 fleury_color_token_highlight       = defcolor_margin_hover;
 fleury_color_token_minor_highlight = defcolor_bar;
 fleury_color_error_annotation      = 0xffFF6B35;   // Match special_character & comment_tag
