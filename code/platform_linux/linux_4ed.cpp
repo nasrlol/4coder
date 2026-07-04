@@ -1921,7 +1921,9 @@ main(int argc, char **argv){
     linux_keycode_init(linuxvars.dpy);
     linux_epoll_init();
     
+    #if 0
     linuxvars.audio_thread = system_thread_launch(&linux_audio_main, NULL);
+    #endif
     
     
     // app init

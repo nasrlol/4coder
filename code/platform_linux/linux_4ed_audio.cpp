@@ -1,3 +1,4 @@
+#if 0
 #define ___fred_function function
 #undef function
 #include <alsa/asoundlib.h>
@@ -130,3 +131,5 @@ linux_audio_main(void* _unused)
 }
 
 #undef chk
+
+#endif
