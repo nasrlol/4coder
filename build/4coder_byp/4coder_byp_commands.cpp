@@ -232,7 +232,9 @@ function bool
 byp_is_divider(String_Const_u8 lexeme){
   return (string_has_prefix(lexeme, string_u8_litexpr("//-"))  ||
           string_has_prefix(lexeme, string_u8_litexpr("// -")) ||
-          string_has_prefix(lexeme, string_u8_litexpr("//--")));
+                    string_has_prefix(lexeme, string_u8_litexpr("// ~")) ||
+                    string_has_prefix(lexeme, string_u8_litexpr("//~")) ||
+string_has_prefix(lexeme, string_u8_litexpr("//--")));
 }
 
 function void

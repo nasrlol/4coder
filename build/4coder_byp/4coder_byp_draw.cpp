@@ -1,13 +1,95 @@
 
-// TODO(BYP): param number underlining (account for variadic ...)
 function void
-byp_draw_function_preview_inner(Application_Links *app, Buffer_ID buffer, Range_f32 x_range, Range_i64 range, i64 pos, i32 count){
-  Scratch_Block scratch(app);
-  String_Const_u8 query = push_token_or_word_under_pos(app, scratch, buffer, range.min-1);
+byp_draw_tooltip_rect(Application_Links *app, Rect_f32 rect){
+  draw_rectangle_fcolor(app, rect, 3.f, fcolor_id(defcolor_back));
+  draw_rectangle_outline_fcolor(app, rect, 3.f, 2.f, fcolor_id(defcolor_ghost_character));
+}
 
-  Buffer_ID target_buffer = -1;
-  Range_i64 target_range = Ii64(-1);
+function Vec2_f32
+byp_draw_pos_context_tokens(Application_Links *app, Face_ID face,
+                                      String_Const_u8 backing_string,
+                                      Token_Array tokens, b32 do_render,
+                                      int highlight_arg, Vec2_f32 text_position,
+                                      f32 max_x)
+{
+    Scratch_Block scratch(app);
+    Vec2_f32 starting_text_pos = text_position;
+    Face_Metrics metrics = get_face_metrics(app, face);
 
+    Token_Iterator_Array it = token_iterator_pos(0, &tokens, 0);
+    b32 found_first_open_paren = 0;
+    for(int arg_idx = 0;;)
+    {
+        Token *token = token_it_read(&it);
+        if(token == 0) { break; }
+
+        if(token->kind == TokenBaseKind_Whitespace)
+        {
+            text_position.x += get_string_advance(app, face, string_u8_litexpr(" "));
+        }
+        else
+        {
+            ARGB_Color color = finalize_color(defcolor_text_default, 0);
+            if(token->kind == TokenBaseKind_StatementClose)
+            {
+                String_Const_u8 str = string_substring(backing_string, Ii64(token));
+                if(string_match(str, S8Lit(",")))
+                {
+                    arg_idx += 1;
+                }
+            }
+            else if(token->kind == TokenBaseKind_ParentheticalOpen)
+            {
+                found_first_open_paren = 1;
+            }
+
+            // NOTE(rjf): Highlight
+            b32 highlight = 0;
+            if(found_first_open_paren && arg_idx == highlight_arg &&
+               (token->kind == TokenBaseKind_Identifier ||
+                token->kind == TokenBaseKind_Operator ||
+                token->kind == TokenBaseKind_Keyword))
+            {
+                color = finalize_color(defcolor_preproc, 0); // TODO: get a different color for this one
+                highlight = 1;
+            }
+
+            Vec2_f32 start_pos = text_position;
+            String_Const_u8 token_string = string_substring(backing_string,
+                                                            Ii64(token->pos, token->pos+token->size));
+            f32 string_advance = get_string_advance(app, face, token_string);
+            if(text_position.x + string_advance >= max_x)
+            {
+                text_position.x = starting_text_pos.x;
+                text_position.y += metrics.line_height;
+            }
+            if(do_render)
+            {
+                draw_string(app, face, token_string, text_position, color);
+            }
+            text_position.x += string_advance;
+            if(highlight)
+            {
+                if(do_render)
+                {
+                    draw_rectangle(app, Rf32(start_pos.x, start_pos.y + metrics.line_height,
+                                             text_position.x, start_pos.y + metrics.line_height + 2.f),
+                                   1.f, color);
+                }
+            }
+        }
+
+        if(token_it_inc_all(&it) == 0)
+        {
+            break;
+        }
+    }
+    return text_position;
+}
+
+function b32
+byp_code_index_find_function_note(Application_Links *app, String_Const_u8 query, Buffer_ID *out_buffer, Range_i64 *out_pos){
+  b32 found = false;
   code_index_lock();
   for(Buffer_ID b = get_buffer_next(app, 0, Access_Always);
       b != 0;
@@ -20,8 +102,9 @@ byp_draw_function_preview_inner(Application_Links *app, Buffer_ID buffer, Range_
         if((note->note_kind == CodeIndexNote_Function || note->note_kind == CodeIndexNote_Macro) &&
            string_match(note->text, query))
         {
-          target_buffer = b;
-          target_range = note->pos;
+          *out_buffer = b;
+          *out_pos = note->pos;
+          found = true;
           goto done;
         }
       }
@@ -29,8 +112,173 @@ byp_draw_function_preview_inner(Application_Links *app, Buffer_ID buffer, Range_
   }
   done:;
   code_index_unlock();
+  return found;
+}
 
-  if(target_buffer < 0){ return; }
+function void
+byp_draw_pos_context_call(Application_Links *app, Face_ID face, Face_Metrics metrics, f32 padding,
+                          Rect_f32 view_rect, Vec2_f32 *tooltip_position,
+                          String_Const_u8 query, i32 arg_idx)
+{
+  Scratch_Block scratch(app);
+  Buffer_ID def_buffer = 0;
+  Range_i64 def_pos = {};
+  if(!byp_code_index_find_function_note(app, query, &def_buffer, &def_pos)){ return; }
+
+  // NOTE: Find range of definition + params
+  Range_i64 definition_range = def_pos;
+  {
+    Token_Array defbuffer_tokens = get_token_array_from_buffer(app, def_buffer);
+    Token_Iterator_Array it = token_iterator_pos(0, &defbuffer_tokens, def_pos.min);
+    i32 paren_nest = 0;
+    for(;token_it_inc_all(&it);)
+    {
+      Token *token = token_it_read(&it);
+      if(token)
+      {
+        if(token->kind == TokenBaseKind_ParentheticalOpen)
+        {
+          paren_nest += 1;
+        }
+        if(token->kind == TokenBaseKind_ParentheticalClose)
+        {
+          paren_nest -= 1;
+          if(paren_nest == 0)
+          {
+            definition_range.max = token->pos + token->size;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  String_Const_u8 definition_string = push_buffer_range(app, scratch, def_buffer, definition_range);
+  Token_Array definition_tokens = token_array_from_text(app, scratch, definition_string);
+
+  // NOTE: Calculate needed size for this tooltip.
+  f32 max_x = view_rect.x1-view_rect.x0;
+  Vec2_f32 end_draw_position = byp_draw_pos_context_tokens(app, face, definition_string, definition_tokens,
+                                                            false, 0, V2f32(0, 0), max_x);
+  Vec2_f32 needed_size =
+  {
+    (end_draw_position.y > 0) ? max_x : end_draw_position.x,
+    end_draw_position.y,
+  };
+
+  Rect_f32 draw_rect =
+  {
+    tooltip_position->x,
+    tooltip_position->y,
+    tooltip_position->x + needed_size.x + 2*padding,
+    tooltip_position->y + needed_size.y + metrics.line_height + 2*padding,
+  };
+  if(draw_rect.x1 > view_rect.x1)
+  {
+    f32 width = rect_width(draw_rect);
+    draw_rect.x0 = (f32)(int)(view_rect.x1 - width);
+    draw_rect.x1 = view_rect.x1;
+  }
+  if(draw_rect.y1 > view_rect.y1)
+  {
+    f32 height = rect_height(draw_rect);
+    draw_rect.y0 = (f32)(int)(view_rect.y1 - height);
+    draw_rect.y1 = view_rect.y1;
+  }
+
+  byp_draw_tooltip_rect(app, draw_rect);
+
+  // NOTE: Render tokens of definition
+  Vec2_f32 text_position =
+  {
+    draw_rect.x0 + padding,
+    draw_rect.y0 + padding,
+  };
+  byp_draw_pos_context_tokens(app, face, definition_string, definition_tokens,
+                              true, arg_idx, text_position, view_rect.x1);
+
+  tooltip_position->y += draw_rect.y1 - draw_rect.y0;
+}
+
+// NOTE(BYP): direct port of fleury's F4_CPP_PosContext, walking backward from the
+// cursor to find (nested) enclosing calls and which comma-separated argument the
+// cursor sits in, without going through a per-language dispatch table -- byp only
+// ever lexes/indexes C/C++ (see 4coder_default_hooks.cpp), so there's nothing to
+// dispatch on.
+function void
+byp_draw_pos_context(Application_Links *app, View_ID view, Buffer_ID buffer,
+                     Text_Layout_ID text_layout_id, i64 pos)
+{
+  if(def_get_config_b32(vars_save_string_lit("byp_disable_pos_context")))
+  {
+    return;
+  }
+
+  ProfileScope(app, "[BYP] Pos Context Rendering");
+  Scratch_Block scratch(app);
+
+  Token_Array tokens = get_token_array_from_buffer(app, buffer);
+  if(tokens.tokens == 0){ return; }
+
+  Rect_f32 view_rect = view_get_screen_rect(app, view);
+  Face_ID face = byp_small_italic_face;
+  Face_Metrics metrics = get_face_metrics(app, face);
+  f32 padding = 4.f;
+
+  Vec2_f32 tooltip_position =
+  {
+    global_cursor_rect.x0,
+    global_cursor_rect.y1,
+  };
+
+  Token_Iterator_Array it = token_iterator_pos(0, &tokens, pos);
+  i32 paren_nest = 0;
+  i32 arg_idx = 0;
+  for(i32 i = 0, calls_found = 0; calls_found < 4; i += 1)
+  {
+    Token *token = token_it_read(&it);
+    if(token == 0){ break; }
+
+    if(paren_nest == 0 &&
+       token->kind == TokenBaseKind_ParentheticalOpen &&
+       token_it_dec_non_whitespace(&it))
+    {
+      Token *name = token_it_read(&it);
+      if(name && name->kind == TokenBaseKind_Identifier)
+      {
+        String_Const_u8 query = push_buffer_range(app, scratch, buffer, Ii64(name));
+        byp_draw_pos_context_call(app, face, metrics, padding, view_rect, &tooltip_position, query, arg_idx);
+        calls_found += 1;
+        arg_idx = 0;
+      }
+    }
+    else if(token->kind == TokenBaseKind_ParentheticalOpen)
+    {
+      paren_nest -= 1;
+    }
+    else if(token->kind == TokenBaseKind_ParentheticalClose && i > 0)
+    {
+      paren_nest += 1;
+    }
+    else if(paren_nest == 0 && i > 0 && token->kind == TokenBaseKind_StatementClose &&
+            buffer_get_char(app, buffer, token->pos) == ',')
+    {
+      arg_idx += 1;
+    }
+
+    if(!token_it_dec_non_whitespace(&it)){ break; }
+  }
+}
+
+// TODO(BYP): param number underlining (account for variadic ...)
+function void
+byp_draw_function_preview_inner(Application_Links *app, Buffer_ID buffer, Range_f32 x_range, Range_i64 range, i64 pos, i32 count){
+  Scratch_Block scratch(app);
+  String_Const_u8 query = push_token_or_word_under_pos(app, scratch, buffer, range.min-1);
+
+  Buffer_ID target_buffer = 0;
+  Range_i64 target_range = {};
+  if(!byp_code_index_find_function_note(app, query, &target_buffer, &target_range)){ return; }
 
   target_range.max = vim_scan_bounce(app, target_buffer, target_range.max, Scan_Forward) + 1;
 
@@ -402,7 +650,8 @@ byp_draw_compile_errors(Application_Links *app, Buffer_ID buffer, Text_Layout_ID
     Rect_f32 end_rect = text_layout_character_on_screen(app, text_layout_id, end_pos);
     Vec2_f32 p0 = V2f32(end_rect.x1 + 4.f, end_rect.y0 + 2.f);
     String_Const_u8 error_string = string_skip(comp_line_string, jump.colon_position + 2);
-    draw_string(app, byp_small_italic_face, error_string, p0, cl_error);
+
+draw_string(app, byp_small_italic_face, error_string, p0, cl_error);
   }
 }
 
@@ -518,7 +767,8 @@ byp_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
 
   vim_draw_after_text(app, view_id, is_active_view, buffer, text_layout_id, cursor_roundness, mark_thickness, frame_info);
   if(is_active_view){
-    byp_draw_function_preview(app, buffer, If32(rect.x0, rect.x1), cursor_pos);
+     byp_draw_function_preview(app, buffer, If32(rect.x0, rect.x1), cursor_pos);
+     byp_draw_pos_context(app, view_id, buffer, text_layout_id, cursor_pos);
   }
 
   draw_set_clip(app, prev_clip);

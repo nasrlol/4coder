@@ -68,6 +68,11 @@ parse_jump_location(String_Const_u8 line){
   u64 whitespace_length = (u64)(reduced_line.str - line.str);
   line = reduced_line;
 
+  if (string_match(string_prefix(line, 22), string_u8_litexpr("In file included from ")) ||
+      string_match(string_prefix(line, 5),  string_u8_litexpr("from "))){
+      return(jump);
+  }
+
   u64 left_paren_pos = string_find_first(line, '(');
   u64 right_paren_pos = left_paren_pos + string_find_first(string_skip(line, left_paren_pos), ')');
   for (;!jump.is_ms_style && right_paren_pos < line.size;){
@@ -120,6 +125,7 @@ parse_jump_location(String_Const_u8 line){
   }
 
   if (!jump.is_ms_style){
+
     i32 start = (i32)try_skip_rust_arrow(line);
     if (start != 0){
       jump.has_rust_arrow = true;

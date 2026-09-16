@@ -51,6 +51,7 @@ byp_vim_bindings(Application_Links *app){
  VimBind(N|MAP, open_panel_hsplit,                 (Alt|KeyCode_H));
  VimBind(N|MAP, close_panel,                       (Alt|KeyCode_Q));
 
+
  VimBind(N|V|MAP, vim_bounce,                          (Ctl|KeyCode_5));
  VimBind(N|V|MAP, byp_open_current_peek,               (Alt|KeyCode_Return));
  VimBind(N|V|MAP, byp_find_divider_up,             (Ctl|Sft|KeyCode_LeftBracket));
@@ -96,7 +97,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
 
  Bind(execute_any_cli,               KeyCode_Z, KeyCode_Alt);
  Bind(execute_previous_cli,          KeyCode_Z, KeyCode_Alt, KeyCode_Shift);
- Bind(quick_swap_buffer,             KeyCode_BackwardSlash, KeyCode_Alt);
+ Bind(quick_swap_buffer,             KeyCode_Tab, KeyCode_Control);
  Bind(exit_4coder,                   KeyCode_F4, KeyCode_Alt);
 
  Bind(byp_project_fkey_command, KeyCode_F1);
@@ -126,6 +127,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(byp_toggle_set_col_ruler,                      KeyCode_BackwardSlash, KeyCode_Control, KeyCode_Shift);
 
  Bind(toggle_virtual_whitespace,                     KeyCode_0, KeyCode_Control);
+
  //Bind(trim_leading_ws,                               KeyCode_1, KeyCode_Control);
  //Bind(auto_indent_line_at_cursor,                    KeyCode_2, KeyCode_Control);
 
@@ -152,7 +154,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
 
  Bind(set_mark,                                      KeyCode_Space, KeyCode_Control);
 
- //  Bind(delete_range,                                  KeyCode_D, KeyCode_Control);
+ // Bind(delete_range,                                  KeyCode_D, KeyCode_Control);
  // Bind(delete_line,                                   KeyCode_D, KeyCode_Control, KeyCode_Shift);
 
  Bind(search,                                        KeyCode_F, KeyCode_Control);
@@ -168,7 +170,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(cursor_mark_swap,                              KeyCode_M, KeyCode_Control);
  Bind(query_replace,                                 KeyCode_Q, KeyCode_Control);
  Bind(query_replace_identifier,                      KeyCode_Q, KeyCode_Control, KeyCode_Shift);
- Bind(query_replace_selection,                       KeyCode_Q, KeyCode_Alt);
+ Bind(replace_in_range,                              KeyCode_Q, KeyCode_Alt);
 
  Bind(save,                                          KeyCode_S, KeyCode_Control);
  Bind(save_all_dirty_buffers,                        KeyCode_S, KeyCode_Control, KeyCode_Shift);

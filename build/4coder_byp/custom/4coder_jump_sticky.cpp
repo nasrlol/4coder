@@ -58,7 +58,15 @@ parse_buffer_to_jump_array(Application_Links *app, Arena *arena, Buffer_ID buffe
         Parsed_Jump parsed_jump = parse_jump_location(line_str);
         if (parsed_jump.success){
           Buffer_ID jump_buffer = {};
-          if (open_file(app, &jump_buffer, parsed_jump.location.file, false, true)){
+          String_Const_u8 jump_file = parsed_jump.location.file;
+          if (jump_file.size > 0 && jump_file.str[0] != '/'){
+            Variable_Handle prj_var = vars_read_key(vars_get_root(), vars_save_string_lit("prj_config"));
+            String_Const_u8 prj_dir = prj_path_from_project(arena, prj_var);
+            if (prj_dir.size > 0){
+              jump_file = push_u8_stringf(arena, "%.*s/%.*s", string_expand(prj_dir), string_expand(jump_file));
+            }
+          }
+          if (open_file(app, &jump_buffer, jump_file, false, true)){
             if (buffer_exists(app, jump_buffer)){
               Buffer_Cursor cursor = buffer_compute_cursor(app, jump_buffer, seek_jump(parsed_jump));
               if (cursor.line > 0){
