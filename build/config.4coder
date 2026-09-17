@@ -40,12 +40,12 @@ default_tab_width                         = 4;
 //- coloring
 treat_as_code                             = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.md.4coder.jai.vert.frag.rs.jr";
 
-highlight_line_at_cursor                  = true;
+highlight_line_at_cursor                  = false;
 default_font_hinting                      = true;
 default_theme_name                        = "theme-nasr";
 default_font_name                         = "jetbrains-mono.ttf";
 
-default_font_size                         = 20;
+default_font_size                         = 28;
 
 //- dont care
 
