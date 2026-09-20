@@ -198,5 +198,5 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(comment_line_toggle,                           KeyCode_Semicolon, KeyCode_Control);
   Bind(word_complete,                                 KeyCode_Tab);
  Bind(if0_off,                                       KeyCode_I, KeyCode_Alt);
- Bind(open_matching_file_cpp,                        KeyCode_2, KeyCode_Alt);
+ Bind(open_file_in_quotes,                           KeyCode_Control, KeyCode_W);
 }

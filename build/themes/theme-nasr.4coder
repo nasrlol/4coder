@@ -28,18 +28,19 @@ defcolor_at_highlight               = 0xFFc4a882;
 
 
 defcolor_text_default               =  0xFFc4a882;
- defcolor_text_cycle              = {0xFFFF6B35, 0xFFB8860B, 0xFFCf8050, 0xFFE5A035};
-defcolor_text_cycle                 = { 0xFFA00000, 0xFF00A000, 0xFF0030B0, 0xFFA0A000 };
+ defcolor_text_cycle                 = {0xFFFF6B35, 0xFFB8860B, 0xFFCf8050, 0xFFE5A035};
+defcolor_text_cycle                 = {0xFFA00000, 0xFF00A000, 0xFF0030B0, 0xFFA0A000};
 
 defcolor_comment                    =  0xFF7A6A55;
 defcolor_comment_pop                = {0xFF0ff000, 0xFfff0f00};
 
-defcolor_keyword                    =  0xFFE5A035;
 
-defcolor_str_constant               =  0xFFC87040;
-defcolor_char_constant              =  0xFFC87040;
+defcolor_str_constant               =  0xFF487040;
+defcolor_char_constant              =  0xFF487040;
+
 defcolor_include                    =  defcolor_str_constant;
-defcolor_int_constant               =  0xFFD85830;
+defcolor_int_constant               =  defcolor_text_default;
+
 defcolor_float_constant             =  0xFFE07050;
 defcolor_bool_constant              =  0xFFB8860B;
 defcolor_preproc                    =  0xFFC56028;
@@ -52,48 +53,29 @@ defcolor_undo                       =  0xFFB8860B;
 defcolor_highlight_junk             =  0xFF4A1A00;
 defcolor_highlight_white            =  0xFF2A1A10;
 
-defcolor_bar                        =  0xFFc4a882;
-defcolor_base                       =  0xFF000000;
-defcolor_pop1                       =  0xFFD4B896;
+defcolor_bar                        =  0xFF000000;
+defcolor_base                       =  defcolor_text_default;
+defcolor_pop1                       =  defcolor_text_default;
 defcolor_pop2                       =  0xFFD85830;
 
 defcolor_line_numbers_back          =  0xFF2A2010;
 defcolor_line_numbers_text          =  0xFF6A5A48;
 
-defcolor_function                   =  0xFFB08860;
+
 defcolor_type                       =  0xFFC48050;
 defcolor_primitive                  =  0xFFC48050;
-defcolor_macro                      =  0xFFD46830;
-defcolor_enum                       =  0xFFE5A035;
-defcolor_global                     =  0xFF9B7050;
-defcolor_control                    =  defcolor_preproc;
-defcolor_struct                     =  defcolor_keyword;
-defcolor_non_text                   =  0xFFD4B896;
+defcolor_enum                       =  0xFFC48050;
+defcolor_global                     =  0xFFC48050;
 
-defcolor_vim_filebar_pop            =  0xFFB08860;
+defcolor_control                    =  defcolor_text_default;
+defcolor_non_text                   =  defcolor_keyword;
+defcolor_struct                     =  defcolor_keyword;
+defcolor_keyword                    =  defcolor_text_default;
+
+defcolor_function                   =  0xFFC48050;
+defcolor_macro                      =  0xFFC48050;
+
+defcolor_vim_filebar_pop            =  0xFF000000;
 defcolor_vim_chord_text             =  defcolor_text_default;
 defcolor_vim_chord_unresolved       =  defcolor_mark;
 defcolor_vim_chord_error            =  0xFFFF6B35;
-
-fleury_color_syntax_crap              = defcolor_non_text;
-fleury_color_operators                = defcolor_non_text;
-fleury_color_inactive_pane_overlay    = 0x44000000;
-fleury_color_inactive_pane_background = 0xff151008;
-fleury_color_file_progress_bar        = 0xffE5A035;
-fleury_color_brace_highlight          = { 0xFFE5A035 };
-fleury_color_brace_line               = { 0x806B5A45 };
-fleury_color_brace_annotation         = { 0x906B5A45 };
-fleury_color_index_product_type       = defcolor_type;
-fleury_color_index_sum_type           = defcolor_type;
-fleury_color_index_function           = defcolor_function;
-fleury_color_index_macro              = defcolor_macro;
-fleury_color_index_constant           = defcolor_enum;
-fleury_color_index_comment_tag        = 0xffFF6B35;
-fleury_color_index_decl               = 0xFFC48050;
-fleury_color_plot_cycle               = { 0xffC48050, 0xffE5A035, 0xffD06830, 0xffC56028 };
-fleury_color_token_highlight          = defcolor_margin_hover;
-fleury_color_token_minor_highlight    = defcolor_bar;
-fleury_color_error_annotation         = 0xffFF6B35;
-fleury_color_lego_grab                = 0xff9B7050;
-fleury_color_lego_splat               = 0xFFC48050;
-fleury_color_comment_user_name        = 0xffF00B35;
