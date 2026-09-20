@@ -20,7 +20,7 @@ enable_output_wrapping                    = false;
 enable_undo_fade_out                      = true;
 
 cursor_roundness                          = 0;  // 0-50
-mark_thickness                            = 4;
+mark_thickness                            = 2;
 lister_roundness                          = 0;   // 0-50
 
 enable_code_wrapping                      = false;
@@ -31,7 +31,7 @@ automatically_load_project                = true;
 
 //- indentation
 enable_virtual_whitespace                 = true;
-virtual_whitespace_regular_indent         = 4;
+virtual_whitespace_regular_indent         = 1;
 
 indent_with_tabs                          = true;
 indent_width                              = 4;
@@ -45,7 +45,7 @@ default_font_hinting                      = true;
 default_theme_name                        = "theme-nasr";
 default_font_name                         = "jetbrains-mono.ttf";
 
-default_font_size                         = 28;
+default_font_size                         = 14;
 
 //- dont care
 

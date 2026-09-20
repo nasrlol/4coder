@@ -1,4 +1,3 @@
-
 function void
 byp_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  MappingScope();
@@ -38,14 +37,13 @@ byp_vim_bindings(Application_Links *app){
  VimBind(N|MAP, redo,                              (Ctl|Sft|KeyCode_Z));
  VimBind(N|MAP, save,                                  (Ctl|KeyCode_S));
  VimBind(N|MAP, vim_line_start,                        (Sft|KeyCode_0));
- VimBind(N|MAP, byp_space,                                  KeyCode_Space);
  VimBind(N|MAP, move_line_up,                          (Alt|KeyCode_K));
  VimBind(N|MAP, move_line_down,                        (Alt|KeyCode_J));
  VimBind(N|MAP, change_active_panel_backwards,         (Ctl|KeyCode_H));
  VimBind(N|MAP, change_active_panel,                   (Ctl|KeyCode_L));
  VimBind(N|MAP, goto_next_jump,                        (Alt|KeyCode_N));
  VimBind(N|MAP, goto_prev_jump,                    (Alt|Sft|KeyCode_N));
- VimBind(N|MAP, vim_switch_lister,                 (Ctl|Sft|KeyCode_I));
+ VimBind(N|MAP, vim_switch_lister,                 (Alt|KeyCode_P));
 
  VimBind(N|MAP, open_panel_vsplit,                 (Alt|KeyCode_V));
  VimBind(N|MAP, open_panel_hsplit,                 (Alt|KeyCode_H));
@@ -54,6 +52,7 @@ byp_vim_bindings(Application_Links *app){
 
  VimBind(N|V|MAP, vim_bounce,                          (Ctl|KeyCode_5));
  VimBind(N|V|MAP, byp_open_current_peek,               (Alt|KeyCode_Return));
+
  VimBind(N|V|MAP, byp_find_divider_up,             (Ctl|Sft|KeyCode_LeftBracket));
  VimBind(N|V|MAP, byp_find_divider_down,           (Ctl|Sft|KeyCode_RightBracket));
 
@@ -70,10 +69,16 @@ byp_vim_bindings(Application_Links *app){
 
  VimBind(I|MAP, byp_auto_complete_bracket,                  KeyCode_Return);
  VimBind(I|MAP, byp_auto_complete_bracket,             (Sft|KeyCode_Return));
+
  VimBind(N|MAP, goto_jump_at_cursor,                        KeyCode_Return);
  VimBind(N|MAP, goto_jump_at_cursor_same_panel,        (Sft|KeyCode_Return));
  VimBind(V|MAP, byp_list_all_locations_selection,  (Ctl|Sft|KeyCode_F));
  VimBind(N|MAP, list_all_locations_of_identifier,  (Ctl|Sft|KeyCode_F));
+ VimBind(N|MAP, vim_interactive_open_or_new,       (Alt|KeyCode_O));
+
+ VimBind(N|MAP, list_all_locations,                (Alt|KeyCode_F));
+
+  VimBind(N|MAP, load_project,                      Alt|KeyCode_G);
 
 #undef I
 #undef N
@@ -118,8 +123,6 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(byp_project_fkey_command, KeyCode_F16);
  Bind(toggle_fullscreen, KeyCode_F11);
 
- Bind(vim_interactive_open_or_new,                   KeyCode_O, KeyCode_Control);
- Bind(byp_test,                                      KeyCode_BackwardSlash, KeyCode_Control);
  Bind(increase_face_size,                            KeyCode_Equal, KeyCode_Control);
  Bind(decrease_face_size,                            KeyCode_Minus, KeyCode_Control);
  Bind(byp_reset_face_size,                           KeyCode_0, KeyCode_Control);
@@ -154,20 +157,19 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
 
  Bind(set_mark,                                      KeyCode_Space, KeyCode_Control);
 
- // Bind(delete_range,                                  KeyCode_D, KeyCode_Control);
+  // Bind(delete_range,                                  KeyCode_D, KeyCode_Control);
  // Bind(delete_line,                                   KeyCode_D, KeyCode_Control, KeyCode_Shift);
 
  Bind(search,                                        KeyCode_F, KeyCode_Control);
 
- Bind(list_all_locations,                            KeyCode_F, KeyCode_Control, KeyCode_Shift);
  Bind(list_all_substring_locations_case_insensitive, KeyCode_F, KeyCode_Alt);
  Bind(list_all_locations_of_selection,               KeyCode_G, KeyCode_Control, KeyCode_Shift);
 
  Bind(snippet_lister,                                KeyCode_J, KeyCode_Control);
 
  Bind(kill_buffer,                                   KeyCode_K, KeyCode_Control, KeyCode_Shift);
- //  Bind(duplicate_line,                                KeyCode_L, KeyCode_Control);
  Bind(cursor_mark_swap,                              KeyCode_M, KeyCode_Control);
+
  Bind(query_replace,                                 KeyCode_Q, KeyCode_Control);
  Bind(query_replace_identifier,                      KeyCode_Q, KeyCode_Control, KeyCode_Shift);
  Bind(replace_in_range,                              KeyCode_Q, KeyCode_Alt);
@@ -179,6 +181,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(list_all_locations_of_identifier,              KeyCode_T, KeyCode_Control, KeyCode_Shift);
 
  Bind(paste_and_indent,                              KeyCode_V, KeyCode_Control);
+
  Bind(cut,                                           KeyCode_X, KeyCode_Control);
  Bind(redo,                                          KeyCode_Y, KeyCode_Control);
  Bind(undo,                                          KeyCode_Z, KeyCode_Control);
@@ -191,8 +194,9 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  SelectMap(code_id);
  ParentMap(file_id);
 
+
  Bind(comment_line_toggle,                           KeyCode_Semicolon, KeyCode_Control);
- Bind(word_complete,                                 KeyCode_Tab);
+  Bind(word_complete,                                 KeyCode_Tab);
  Bind(if0_off,                                       KeyCode_I, KeyCode_Alt);
  Bind(open_matching_file_cpp,                        KeyCode_2, KeyCode_Alt);
 }

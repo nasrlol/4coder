@@ -175,7 +175,7 @@ function void vim_default_bindings(Application_Links *app, Key_Code leader){
 
 	VimBind(N|V|MAP, vim_search_identifier,         (Ctl|Sft|KeyCode_8));
 	VimBind(N|V|MAP, vim_search_identifier,             (Sft|KeyCode_8));
-	VimBind(N|V|MAP, vim_clear_search,          SUB_Leader,  KeyCode_Space);
+	VimBind(N|V|MAP, vim_clear_search,                SUB_Leader,  KeyCode_Space);
 	VimBind(N|V|MAP, vim_start_search_forward,               KeyCode_ForwardSlash);
 	VimBind(N|V|MAP, vim_start_search_backward,         (Sft|KeyCode_ForwardSlash));
 	VimBind(N|V|MAP, vim_to_next_pattern,                    KeyCode_N);
