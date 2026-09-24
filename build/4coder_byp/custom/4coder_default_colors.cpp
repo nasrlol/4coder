@@ -93,7 +93,7 @@ make_color_table(Application_Links *app, Arena *arena){
   result.count = (u32)(clamp_top(highest_color_id + 1, max_u32));
   result.arrays = push_array(arena, Color_Array, result.count);
   u32 *dummy = push_array(arena, u32, 1);
-  *dummy = 0xFF990099;
+  *dummy = 0xFFaaaaaa;
   for (i32 i = 0; i < result.count; i += 1){
     result.arrays[i].vals = dummy;
     result.arrays[i].count = 1;

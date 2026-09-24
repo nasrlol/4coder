@@ -64,8 +64,8 @@ CUSTOM_DOC("Responding to a startup event")
     byp_minimal_face = try_create_new_face(app, &desc);
 
     // NOTE(nasr): disabled fullscreen
-    system_set_fullscreen(false);
-    set_window_title(app, string_u8_litexpr("coder"));
+    system_set_fullscreen(true);
+    set_window_title(app, string_u8_litexpr("4coder - nasr"));
 
     byp_relative_numbers = 1;
     byp_show_hex_colors = 1;
@@ -118,9 +118,15 @@ CUSTOM_DOC("Responding to a startup event")
 
     Rect_f32 global_rect = global_get_screen_rectangle(app);
     f32 filebar_y = global_rect.y1 - 2.f*line_height - vim_cur_filebar_offset;
-    if(region.y1 >= filebar_y){ region.y1 = filebar_y; }
+    {
+        Rect_f32 back_rect = region;
+        if(vim_lister_view_id != 0 && vim_lister_view_id != view_id){
+            back_rect.y1 = Min(back_rect.y1, filebar_y);
+        }
+        draw_rectangle_fcolor(app, back_rect, 0.f, fcolor_id(defcolor_back));
+    }
 
-    draw_rectangle_fcolor(app, region, 0.f, fcolor_id(defcolor_back));
+    if(region.y1 >= filebar_y){ region.y1 = filebar_y; }
 
     region = vim_draw_query_bars(app, region, view_id, face_id);
 

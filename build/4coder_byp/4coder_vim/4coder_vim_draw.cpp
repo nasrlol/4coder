@@ -59,7 +59,7 @@ global i32 f4_active_syntax_opt_idx = 0;
 function b32
 F4_ARGBIsValid(ARGB_Color color)
 {
-    return color != 0xFF990099;
+    return color != 0xFFaaaaaa;
 }
 
 internal void

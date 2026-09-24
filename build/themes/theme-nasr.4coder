@@ -13,14 +13,14 @@ defcolor_cursor                     = { 0xFF900900, 0xFF994900 };
 defcolor_at_cursor                  = 0xFf2E4A8C;
 
 nasr_vim_cursor_normal              =  0xFFc4a882;
-nasr_vim_cursor_insert              = 0xFF40ff44;
+nasr_vim_cursor_insert              =  0xFf2E4A8C;
 
 nasr_vim_cursor_visual              = 0xFFB0060B;
 
 nasr_mark_color                     = 0xFFB0060B;
 nasr_cursor_inactive                = 0x33999999;
 
-defcolor_highlight_cursor_line      = 0xFF000000;
+defcolor_highlight_cursor_line      = 0x330aa000;
 
 defcolor_mark                       = 0xFFB0060B;
 defcolor_highlight                  = 0x88399930;
@@ -66,10 +66,7 @@ defcolor_type                       =  0xFFC48050;
 defcolor_primitive                  =  0xFFC48050;
 defcolor_enum                       =  0xFFC48050;
 defcolor_global                     =  0xFFC48050;
-
-defcolor_control                    =  defcolor_text_default;
-defcolor_non_text                   =  defcolor_keyword;
-defcolor_struct                     =  defcolor_keyword;
+ defcolor_control                    =  defcolor_text_default; defcolor_non_text                   =  defcolor_keyword; defcolor_struct                     =  defcolor_keyword;
 defcolor_keyword                    =  defcolor_text_default;
 
 defcolor_function                   =  0xFFC48050;
