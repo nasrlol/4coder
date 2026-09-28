@@ -982,8 +982,8 @@ linux_x11_init(int argc, char** argv, Plat_Settings* settings) {
     XkbSetDetectableAutoRepeat(linuxvars.dpy, True, NULL);
     
     XCursor cursors[APP_MOUSE_CURSOR_COUNT] = {
-        None,
-        None,
+        XCreateFontCursor(linuxvars.dpy, XC_left_ptr),
+        XCreateFontCursor(linuxvars.dpy, XC_left_ptr),
         XCreateFontCursor(linuxvars.dpy, XC_xterm),
         XCreateFontCursor(linuxvars.dpy, XC_sb_h_double_arrow),
         XCreateFontCursor(linuxvars.dpy, XC_sb_v_double_arrow)

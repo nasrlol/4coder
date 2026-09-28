@@ -80,6 +80,13 @@ byp_vim_bindings(Application_Links *app){
 
   VimBind(N|MAP, load_project,                      Alt|KeyCode_G);
 
+ VimBind(N|MAP, vim_list_all_functions_current_buffer_lister, SUB_Leader,       KeyCode_F);
+ VimBind(N|MAP, list_all_functions_all_buffers_lister,        SUB_Leader,  (Sft|KeyCode_F));
+ VimBind(N|MAP, open_matching_file_cpp,                       SUB_Leader,       KeyCode_O);
+ VimBind(N|MAP, jump_to_last_point,                           SUB_Leader,       KeyCode_B);
+ VimBind(N|MAP, interactive_kill_buffer,                      SUB_Leader,       KeyCode_K);
+ VimBind(N|MAP, list_all_locations_of_type_definition_of_identifier, SUB_G, (Sft|KeyCode_D));
+
 #undef I
 #undef N
 #undef V
@@ -115,7 +122,6 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(byp_project_fkey_command, KeyCode_F8);
  Bind(byp_project_fkey_command, KeyCode_F9);
  Bind(byp_project_fkey_command, KeyCode_F10);
- Bind(byp_project_fkey_command, KeyCode_F11);
  Bind(byp_project_fkey_command, KeyCode_F12);
  Bind(byp_project_fkey_command, KeyCode_F13);
  Bind(byp_project_fkey_command, KeyCode_F14);
@@ -129,7 +135,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(vim_proj_cmd_lister,                           KeyCode_X, KeyCode_Alt, KeyCode_Shift);
  Bind(byp_toggle_set_col_ruler,                      KeyCode_BackwardSlash, KeyCode_Control, KeyCode_Shift);
 
- Bind(toggle_virtual_whitespace,                     KeyCode_0, KeyCode_Control);
+ Bind(toggle_virtual_whitespace,                     KeyCode_0, KeyCode_Control, KeyCode_Shift);
 
  //Bind(trim_leading_ws,                               KeyCode_1, KeyCode_Control);
  //Bind(auto_indent_line_at_cursor,                    KeyCode_2, KeyCode_Control);
@@ -162,7 +168,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
 
  Bind(search,                                        KeyCode_F, KeyCode_Control);
 
- Bind(list_all_substring_locations_case_insensitive, KeyCode_F, KeyCode_Alt);
+ Bind(list_all_locations,                            KeyCode_F, KeyCode_Alt);
  Bind(list_all_locations_of_selection,               KeyCode_G, KeyCode_Control, KeyCode_Shift);
 
  Bind(snippet_lister,                                KeyCode_J, KeyCode_Control);
@@ -198,5 +204,5 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
  Bind(comment_line_toggle,                           KeyCode_Semicolon, KeyCode_Control);
   Bind(word_complete,                                 KeyCode_Tab);
  Bind(if0_off,                                       KeyCode_I, KeyCode_Alt);
- Bind(open_file_in_quotes,                           KeyCode_Control, KeyCode_W);
+ Bind(open_file_in_quotes,                           KeyCode_W, KeyCode_Control);
 }

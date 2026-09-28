@@ -43,7 +43,7 @@ treat_as_code                             = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.md.
 highlight_line_at_cursor                  = true;
 default_font_hinting                      = true;
 default_theme_name                        = "theme-nasr";
-default_font_name                         = "jetbrains-mono.ttf";
+default_font_name                         = "liberation-mono.ttf";
 
 default_font_size                         = 20;
 

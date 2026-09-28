@@ -64,7 +64,7 @@ CUSTOM_DOC("Responding to a startup event")
     byp_minimal_face = try_create_new_face(app, &desc);
 
     // NOTE(nasr): disabled fullscreen
-    system_set_fullscreen(true);
+    system_set_fullscreen(false);
     set_window_title(app, string_u8_litexpr("4coder - nasr"));
 
     byp_relative_numbers = 1;

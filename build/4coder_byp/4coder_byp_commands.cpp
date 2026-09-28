@@ -39,11 +39,8 @@ buffer_kill(app, buffer, BufferKill_AlwaysKill);
 CUSTOM_COMMAND_SIG(byp_reload_config)
 CUSTOM_DOC("Reloads config.4coder file")
 {
-View_ID view = get_active_view(app, Access_Always);
-Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
-Face_ID face = get_face_id(app, buffer);
-Face_Description face_desc = get_face_description(app, face);
-load_config_and_apply(app, &global_config_arena, face_desc.parameters.pt_size, face_desc.parameters.hinting);
+// NOTE(nasr): pass 0 so default_font_size / default_font_hinting come from config.4coder
+load_config_and_apply(app, &global_config_arena, 0, false);
 }
 
 CUSTOM_COMMAND_SIG(zbyp_reload_project)
