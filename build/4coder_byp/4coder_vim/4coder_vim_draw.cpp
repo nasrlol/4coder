@@ -418,7 +418,7 @@ F4_Cursor_RenderEmacsStyle(Application_Links *app, View_ID view_id, b32 is_activ
     flags |= !!global_keyboard_macro_is_recording * ColorFlag_Macro;
 
 #if 0
-	ARGB_Color cursor_color = F4_GetColor(app, ColorCtx_Cursor(flags, GlobalKeybindingMode));
+    ARGB_Color cursor_color = F4_GetColor(app, ColorCtx_Cursor(flags, GlobalKeybindingMode));
 #endif
 
 
@@ -426,10 +426,10 @@ F4_Cursor_RenderEmacsStyle(Application_Links *app, View_ID view_id, b32 is_activ
     ARGB_Color mark_color                              =  F4_ARGBFromID(active_color_table, nasr_mark_color, 0);
     ARGB_Color inactive_cursor_color                   =  F4_ARGBFromID(active_color_table, nasr_cursor_inactive, 0);
 
-	if(vim_state.mode == VIM_Normal)      cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_normal, 0);
-	else if(vim_state.mode == VIM_Insert) cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_insert, 0);
-	else if(vim_state.mode == VIM_Visual) cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_visual, 0);
-	else                                  cursor_color =  F4_ARGBFromID(active_color_table, defcolor_cursor, 0);
+    if(vim_state.mode == VIM_Normal)      cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_normal, 0);
+    else if(vim_state.mode == VIM_Insert) cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_insert, 0);
+    else if(vim_state.mode == VIM_Visual) cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_visual, 0);
+    else                                  cursor_color =  F4_ARGBFromID(active_color_table, defcolor_cursor, 0);
 
 
     if(is_active_view == 0) {

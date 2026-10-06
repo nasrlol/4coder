@@ -21,9 +21,9 @@ blacklist_patterns = { ".*", };
 
 paths = { { .path = ".", .recursive = true, .relative = true, }, };
 load_paths = {
- .win = paths,
- .linux = paths,
- .mac = paths
+    .win = paths,
+    .linux = paths,
+    .mac = paths
 };
 
 commands = {

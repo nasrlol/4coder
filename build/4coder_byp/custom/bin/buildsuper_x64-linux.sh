@@ -15,10 +15,13 @@ if [ -z "$SOURCE" ]; then
 fi
 echo SOURCE = $SOURCE
 
-opts="-Wno-write-strings -Wno-switch-outside-range -Wno-null-dereference -Wno-comment -Wno-switch -Wno-missing-declarations -g -DOS_LINUX=1 -DOS_WINDOWS=0 -DOS_MAC=0"
+opts="-Wno-write-strings -Wno-switch-outside-range -Wno-null-dereference -Wno-comment -Wno-switch -Wno-missing-declarations -DOS_LINUX=1 -DOS_WINDOWS=0 -DOS_MAC=0"
 arch=
 
 debug=-g
+if [ "$2" == "release" ]; then
+    debug=-O2
+fi
 
 preproc_file=4coder_command_metadata.i
 meta_macros="-DMETA_PASS"
