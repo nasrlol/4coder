@@ -1,4 +1,4 @@
 ### My personal 4coder configuration
 
-combination of rjf layer and byp layer
-modified to work on gentoo asahi linux
+A combination of the rjf layer and the byp layer,
+modified to work on Gentoo Asahi Linux.
