@@ -243,10 +243,18 @@ vim_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
     lister->visible_count = Min(col_num*row_num, lister->filtered.count);
 
     // TODO(BYP) check exactly why row_num+2. Had to update when changing block_height
-    region = rect_split_top_bottom_neg(region, (row_num+2)*block_height).b;
-    region = rect_split_top_bottom_neg(region, 2.f*line_height).a;
-    vim_nxt_filebar_offset = row_num*block_height + 0.1f;
     // non-zero so when lister displays no results, it still displays the cursor
+    f32 nxt_offset = row_num*block_height + 0.1f;
+    if(vim_nxt_filebar_offset != nxt_offset){
+        // NOTE(nasr): target changes here, after this frame's tick already ran; request another
+        // frame or the filebar animation stalls half-way until the next input
+        vim_nxt_filebar_offset = nxt_offset;
+        animate_in_n_milliseconds(app, 0);
+    }
+    // NOTE(nasr): cover the animating height too, otherwise a shrinking lister leaves a strip nobody paints
+    f32 lister_height = Max(vim_cur_filebar_offset, row_num*block_height);
+    region = rect_split_top_bottom_neg(region, lister_height + 2*block_height).b;
+    region = rect_split_top_bottom_neg(region, 2.f*line_height).a;
 
     // Render the view
     Render_Caller_Function *render_caller = (Render_Caller_Function *)get_custom_hook(app, HookID_RenderCaller);

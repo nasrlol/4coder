@@ -167,16 +167,21 @@ print_positions_buffered(Application_Links *app, Buffer_Insertion *out, Buffer_I
             insertf(out, "%S:%lld: ", buffer_name, line_number);
 
             Token prev_token = {};
+            b32 skipped_whitespace = false;
             Token_Iterator_Array it = token_iterator_index(buffer, &array, start_index);
             for (;;){
                 Token *token = token_it_read(&it);
-                if (!HasFlag(token->flags, TokenBaseFlag_PreprocessorBody) &&
-                    token->kind != TokenBaseKind_Comment &&
-                    token->kind != TokenBaseKind_Whitespace){
+                if (token->kind == TokenBaseKind_Whitespace){
+                    // NOTE(nasr): whitespace (including newlines) between tokens becomes a single space
+                    skipped_whitespace = true;
+                }
+                else if (!HasFlag(token->flags, TokenBaseFlag_PreprocessorBody) &&
+                         token->kind != TokenBaseKind_Comment){
                     if ((prev_token.sub_kind == TokenCppKind_Identifier ||
                          prev_token.sub_kind == TokenCppKind_Star ||
                          prev_token.sub_kind == TokenCppKind_Comma ||
-                         prev_token.kind == TokenBaseKind_Keyword) &&
+                         prev_token.kind == TokenBaseKind_Keyword ||
+                         (skipped_whitespace && prev_token.size > 0)) &&
                         !(token->sub_kind == TokenCppKind_ParenOp ||
                           token->sub_kind == TokenCppKind_ParenCl ||
                           token->sub_kind == TokenCppKind_Comma)){
@@ -189,6 +194,7 @@ print_positions_buffered(Application_Links *app, Buffer_Insertion *out, Buffer_I
                     end_temp(token_temp);
 
                     prev_token = *token;
+                    skipped_whitespace = false;
                 }
                 if (!token_it_inc(&it)){
                     break;
@@ -259,9 +265,9 @@ list_all_functions(Application_Links *app, Buffer_ID optional_target_buffer){
 
     end_buffer_insertion(&out);
 
-//    NOTE: disabling outputting to the *decl* buffer
-//    View_ID view = get_active_view(app, Access_Always);
-//    view_set_buffer(app, view, decls_buffer, 0);
+    //    NOTE: disabling outputting to the *decl* buffer
+    //    View_ID view = get_active_view(app, Access_Always);
+    //    view_set_buffer(app, view, decls_buffer, 0);
 
 
     lock_jump_buffer(app, decls_name);

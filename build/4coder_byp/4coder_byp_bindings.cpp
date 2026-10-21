@@ -41,10 +41,11 @@ byp_vim_bindings(Application_Links *app){
     VimBind(N|MAP, goto_prev_jump,                               (Alt|Sft|KeyCode_N));
     VimBind(N|MAP, goto_first_jump,                              (Alt|Sft|KeyCode_M));
 
-    VimBind(N|MAP, vim_switch_lister,                            (Alt|KeyCode_P));
-    VimBind(N|MAP, interactive_switch_buffer,                    (Alt|Sft|KeyCode_P));
+    VimBind(N|MAP, vim_switch_lister,                            (Alt|Sft|KeyCode_P));
+    VimBind(N|MAP, interactive_switch_buffer,                    (Alt|KeyCode_P));
 
     VimBind(N|MAP, format_all_buffers,                           SUB_Leader, KeyCode_K);
+    VimBind(N|MAP, toggle_filebar,                               SUB_Leader, KeyCode_T);
 
     //- panels
     VimBind(N|MAP, open_panel_vsplit,                            (Alt|KeyCode_V));
@@ -62,20 +63,21 @@ byp_vim_bindings(Application_Links *app){
     VimBind(I|MAP, byp_auto_complete_bracket,                    KeyCode_Return);
     VimBind(I|MAP, byp_auto_complete_bracket,                    (Sft|KeyCode_Return));
 
-    VimBind(N|MAP, goto_jump_at_cursor,                          KeyCode_Return);
-    VimBind(N|MAP, goto_jump_at_cursor_same_panel,               (Sft|KeyCode_Return));
+    VimBind(N|MAP, vim_interactive_open_or_new,                  (Alt|Sft|KeyCode_O));
+    VimBind(N|MAP, interactive_open_or_new,                      (Alt|KeyCode_O));
 
-    VimBind(N|MAP, vim_interactive_open_or_new,                  (Alt|KeyCode_O));
-    VimBind(N|MAP, interactive_open_or_new,                      (Alt|Sft|KeyCode_O));
     VimBind(N|MAP, interactive_kill_buffer,                      SUB_Leader, KeyCode_Q);
     VimBind(N|MAP, load_project,                                 (Alt|KeyCode_A));
 
-    VimBind(N|MAP, open_matching_file_cpp,                       (Ctl|Sft|KeyCode_W));
+    VimBind(N|MAP, byp_goto,                                     (Ctl|KeyCode_W));
+
     VimBind(N|MAP, jump_to_last_point,                           SUB_Leader, KeyCode_B);
     VimBind(N|V|I|MAP, delete_range,                             (Alt|KeyCode_D));
 
     VimBind(N|MAP, list_all_functions_all_buffers_lister,        SUB_Leader, KeyCode_F);
     VimBind(N|MAP, list_all_locations,                           (Alt|KeyCode_F));
+
+    VimBind(N|V|MAP, command_lister, (Sft|KeyCode_Semicolon));
 
 #undef I
 #undef N

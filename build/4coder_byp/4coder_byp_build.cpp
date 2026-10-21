@@ -36,6 +36,19 @@ byp_get_or_open_build_panel(Application_Links *app){
     return build_footer_panel_view_id;
 }
 
+function b32
+byp_buffer_visible_outside_footer(Application_Links *app, Buffer_ID buffer){
+    if(buffer == 0){ return false; }
+    for(View_ID view = get_view_next(app, 0, Access_Always);
+        view != 0;
+        view = get_view_next(app, view, Access_Always)){
+        if(view != build_footer_panel_view_id && view_get_buffer(app, view, Access_Always) == buffer){
+            return true;
+        }
+    }
+    return false;
+}
+
 function void
 byp_prj_exec_command(Application_Links *app, Arena *scratch, Variable_Handle cmd_var){
     String_ID os_id = vars_save_string_lit(OS_NAME);
@@ -68,11 +81,13 @@ byp_prj_exec_command(Application_Links *app, Arena *scratch, Variable_Handle cmd
             if(footer_panel){
                 view = byp_get_or_open_build_panel(app);
 
-                vim_show_buffer_peek = false;
-                vim_toggle_show_buffer_peek(app);
-                vim_buffer_peek_index = 0;
-                buffer_id = vim_buffer_peek_list[0].buffer_id;
-                vim_buffer_peek_list[0] = {buffer_id, 1.f, 1.f};
+                if(!byp_buffer_visible_outside_footer(app, buffer_identifier_to_id(app, buffer_id))){
+                    vim_show_buffer_peek = false;
+                    vim_toggle_show_buffer_peek(app);
+                    vim_buffer_peek_index = 0;
+                    buffer_id = vim_buffer_peek_list[0].buffer_id;
+                    vim_buffer_peek_list[0] = {buffer_id, 1.f, 1.f};
+                }
                 //view_set_buffer(app, view, buffer_identifier_to_id(app, buffer_id), 0);
             }
             else{
@@ -162,6 +177,7 @@ CUSTOM_DOC("Runs project commands but uses proper footer build panel")
 CUSTOM_COMMAND_SIG(byp_build_project)
 CUSTOM_DOC("Compiles project")
 {
+    format_all_buffers(app);
     View_ID view = get_active_view(app, Access_Always);
     Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
     View_ID build_view = byp_get_or_open_build_panel(app);
@@ -169,8 +185,11 @@ CUSTOM_DOC("Compiles project")
     block_zero_struct(&prev_location);
     lock_jump_buffer(app, string_u8_litexpr("*compilation*"));
 
-    vim_show_buffer_peek = false;
-    vim_toggle_show_buffer_peek(app);
-    vim_buffer_peek_index = 0;
-    vim_buffer_peek_list[0] = {standard_build_build_buffer_identifier, 1.f, 1.f};
+    Buffer_ID comp_buffer = buffer_identifier_to_id(app, standard_build_build_buffer_identifier);
+    if(!byp_buffer_visible_outside_footer(app, comp_buffer)){
+        vim_show_buffer_peek = false;
+        vim_toggle_show_buffer_peek(app);
+        vim_buffer_peek_index = 0;
+        vim_buffer_peek_list[0] = {standard_build_build_buffer_identifier, 1.f, 1.f};
+    }
 }

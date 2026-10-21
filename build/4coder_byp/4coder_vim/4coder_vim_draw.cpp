@@ -828,7 +828,8 @@ vim_draw_filebar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fram
     Rect_f32 title_rect = bar;
     // NOTE(nasr): padding for the title rect
     // just like byp mentioned in the 4coder server
-    title_rect.x1 = (f32)(bar.x0 + char_wid*unique_name.size + 0.5);
+    f32 title_pad = 1.f*char_wid;
+    title_rect.x1 = (f32)(bar.x0 + title_pad + char_wid*unique_name.size + title_pad);
     nasr_draw_rect(app, title_rect, 0.f, fcolor_resolve(fcolor_id(defcolor_vim_filebar_pop)));
 
     Rect_f32 triangle_rect = title_rect;
@@ -873,7 +874,7 @@ vim_draw_filebar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fram
     p.x = Max(p.x + 5.f*char_wid, bar.x1 - char_wid*15.f);
     draw_string(app, face_id, push_stringf(scratch, "%d,%d", cursor.line, cursor.col), p, base_color);
 
-    p.x = bar.x0 + 2.f;
+    p.x = bar.x0 + title_pad;
     draw_string(app, face_id, unique_name, p, base_color);
 
     p.x = bar.x1 - char_wid*3.5f;

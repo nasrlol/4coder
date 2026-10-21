@@ -1,0 +1,75 @@
+// Gruvbox dark (hard)
+defcolor_back                       =  0xFF1D2021;
+defcolor_back_cycle                 = {0x10FFFFFF,  0x08FFFFFF};
+
+defcolor_margin                     =  0xFF282828;
+defcolor_margin_hover               =  0xFF32302F;
+defcolor_margin_active              =  defcolor_margin_hover;
+defcolor_list_item                  = {defcolor_margin, defcolor_back};
+defcolor_list_item_hover            = {defcolor_margin_hover, defcolor_margin};
+defcolor_list_item_active           = {defcolor_margin_active, defcolor_margin_active};
+
+defcolor_cursor                     = { 0xFFEBDBB2, 0xFFFE8019 };
+
+defcolor_at_cursor                  = 0xFF1D2021;
+
+nasr_vim_cursor_normal              = 0xFFEBDBB2;
+nasr_vim_cursor_insert              = 0xFF83A598;
+nasr_vim_cursor_visual              = 0xFFD3869B;
+
+nasr_mark_color                     = 0xFFD3869B;
+nasr_cursor_inactive                = 0x33A89984;
+
+defcolor_highlight_cursor_line      = 0xFF282828;
+
+defcolor_mark                       = 0xFFD3869B;
+defcolor_highlight                  = 0x88458588;
+defcolor_at_highlight               = 0xFFFBF1C7;
+
+defcolor_text_default               =  0xFFEBDBB2;
+defcolor_text_cycle                 = {0xFFFB4934, 0xFFB8BB26, 0xFF83A598, 0xFFFABD2F};
+
+defcolor_comment                    =  0xFF928374;
+defcolor_comment_pop                = {0xFFA89984, 0xFFFE8019};
+
+defcolor_str_constant               =  0xFFB8BB26;
+defcolor_char_constant              =  0xFFB8BB26;
+
+defcolor_include                    =  defcolor_str_constant;
+defcolor_int_constant               =  0xFFD3869B;
+
+defcolor_float_constant             =  0xFFD3869B;
+defcolor_bool_constant              =  0xFFD3869B;
+defcolor_preproc                    =  0xFF8EC07C;
+defcolor_special_character          =  0xFFFE8019;
+defcolor_ghost_character            =  0xFF504945;
+
+defcolor_paste                      =  0xFF8EC07C;
+defcolor_undo                       =  0xFFFABD2F;
+
+defcolor_highlight_junk             =  0xFF4A1A1A;
+defcolor_highlight_white            =  0xFF32302F;
+
+defcolor_line_numbers_back          =  0xFF1D2021;
+defcolor_line_numbers_text          =  0xFF665C54;
+
+defcolor_type                       = 0xFFFABD2F;
+defcolor_keyword                    = 0xFFFB4934;
+defcolor_struct                     = defcolor_type;
+defcolor_primitive                  = 0xFFFABD2F;
+defcolor_enum                       = 0xFFD3869B;
+defcolor_global                     = 0xFF83A598;
+defcolor_control                    = 0xFFFB4934;
+defcolor_function                   = 0xFF8EC07C;
+defcolor_macro                      = 0xFFFE8019;
+defcolor_non_text                   = 0xFF665C54;
+
+defcolor_vim_filebar_pop            =  0xFFEBDBB2;
+defcolor_bar                        =  0xFFEBDBB2;
+defcolor_base                       =  0xFF1D2021;
+defcolor_pop1                       =  0xFFFE8019;
+defcolor_pop2                       =  0xFFFB4934;
+
+defcolor_vim_chord_text             =  defcolor_text_default;
+defcolor_vim_chord_unresolved       =  defcolor_mark;
+defcolor_vim_chord_error            =  0xFFFB4934;

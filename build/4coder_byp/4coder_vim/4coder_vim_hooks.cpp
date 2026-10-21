@@ -149,9 +149,6 @@ vim_begin_buffer_inner(Application_Links *app, Buffer_ID buffer_id){
 
     i64 *marks = (i64 *)managed_scope_get_attachment(app, scope, vim_buffer_marks, 26*sizeof(i64));
     block_fill_u64(marks, 26*sizeof(i64), max_u64);
-
-    b32 *wrap_lines_ptr = scope_attachment(app, scope, buffer_wrap_lines, b32);
-    *wrap_lines_ptr = false;
 }
 
 BUFFER_HOOK_SIG(vim_begin_buffer){

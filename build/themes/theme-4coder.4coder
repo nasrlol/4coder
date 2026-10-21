@@ -44,3 +44,26 @@ defcolor_text_cycle = {0xFFA00000, 0xFF00A000, 0xFF0030B0, 0xFFA0A000};
 
 defcolor_line_numbers_back = 0xFF101010;
 defcolor_line_numbers_text = 0xFF404040;
+
+//- byp / vim / nasr colors. Missing ids render as magenta (0xFF990099),
+//  so map them onto this theme's existing colors.
+defcolor_type                       = defcolor_keyword;
+defcolor_struct                     = defcolor_keyword;
+defcolor_primitive                  = defcolor_keyword;
+defcolor_enum                       = defcolor_int_constant;
+defcolor_global                     = defcolor_text_default;
+defcolor_control                    = defcolor_keyword;
+defcolor_function                   = defcolor_text_default;
+defcolor_macro                      = defcolor_preproc;
+defcolor_non_text                   = defcolor_text_default;
+
+defcolor_vim_filebar_pop            = defcolor_mark;
+defcolor_vim_chord_text             = defcolor_text_default;
+defcolor_vim_chord_unresolved       = defcolor_mark;
+defcolor_vim_chord_error            = defcolor_special_character;
+
+nasr_vim_cursor_normal              = defcolor_cursor;
+nasr_vim_cursor_insert              = defcolor_mark;
+nasr_vim_cursor_visual              = defcolor_special_character;
+nasr_mark_color                     = defcolor_mark;
+nasr_cursor_inactive                = defcolor_margin_hover;

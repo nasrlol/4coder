@@ -44,6 +44,7 @@ CUSTOM_ID(colors, nasr_vim_cursor_visual);
 #include "4coder_byp_reformat.cpp"
 #include "4coder_byp_commands.cpp"
 
+#include "4coder_byp_struct_context.cpp"
 #include "4coder_byp_draw.cpp"
 
 #include "4coder_byp_bindings.cpp"
@@ -89,7 +90,7 @@ custom_layer_init(Application_Links *app){
     byp_essential_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
     byp_default_bindings(&framework_mapping, global_map_id, file_map_id, code_map_id);
 
-    vim_default_bindings(app, KeyCode_BackwardSlash);
+    vim_default_bindings(app, KeyCode_Space);
     byp_vim_bindings(app);
 }
 

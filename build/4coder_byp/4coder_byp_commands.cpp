@@ -6,6 +6,7 @@ global Face_ID byp_minimal_face;
 global b32 byp_show_hex_colors;
 global b32 byp_relative_numbers;
 global b32 byp_show_scrollbars;
+global b32 byp_use_stock_filebar;
 
 CUSTOM_COMMAND_SIG(byp_toggle_show_hex_colors)
 CUSTOM_DOC("Toggles value for `show_hex_colors`")
@@ -18,6 +19,10 @@ CUSTOM_DOC("Toggles value for `relative_numbers`")
 CUSTOM_COMMAND_SIG(byp_toggle_show_scrollbars)
 CUSTOM_DOC("Toggles value for `show_scrollbars`")
 { byp_show_scrollbars ^= 1; }
+
+CUSTOM_COMMAND_SIG(byp_toggle_stock_filebar)
+CUSTOM_DOC("Toggles between the vim filebar and the stock 4coder filebar")
+{ byp_use_stock_filebar ^= 1; }
 
 CUSTOM_COMMAND_SIG(byp_clear_jumps)
 CUSTOM_DOC("Clears jump buffer")
@@ -368,3 +373,90 @@ VIM_REQUEST_SIG(byp_apply_title){
 
 VIM_COMMAND_SIG(byp_request_title){ byp_make_vim_request(app, BYP_REQUEST_Title); }
 
+
+// NOTE: Ctrl-W tries, in order: the file named in the quotes around the cursor,
+// the definition of the identifier under the cursor, then the matching .h/.cpp.
+// Everything opens in the current panel so Ctrl-O can come back.
+function b32
+byp_goto_file_in_quotes(Application_Links *app, View_ID view, Buffer_ID buffer, i64 pos){
+    Scratch_Block scratch(app);
+    i64 line = get_line_number_from_pos(app, buffer, pos);
+    Range_i64 line_range = get_line_pos_range(app, buffer, line);
+    String_Const_u8 text = push_buffer_range(app, scratch, buffer, line_range);
+    i64 cursor = pos - line_range.min;
+
+    i64 open = -1;
+    for(i64 i = Min(cursor, (i64)text.size - 1); i >= 0; i -= 1){
+        if(text.str[i] == '"'){ open = i; break; }
+    }
+    if(open < 0 || open == cursor){ return false; }
+    i64 close = -1;
+    for(i64 i = Max(cursor, open + 1); i < (i64)text.size; i += 1){
+        if(text.str[i] == '"'){ close = i; break; }
+    }
+    if(close <= open + 1){ return false; }
+
+    String_Const_u8 quoted_name = string_substring(text, Ii64(open + 1, close));
+    String_Const_u8 path = string_remove_last_folder(push_buffer_file_name(app, scratch, buffer));
+    if(path.size > 0 && character_is_slash(string_get_character(path, path.size - 1))){
+        path = string_chop(path, 1);
+    }
+    String_Const_u8 full_name = push_u8_stringf(scratch, "%.*s/%.*s", string_expand(path), string_expand(quoted_name));
+    if(!file_exists_and_is_file(app, full_name)){ return false; }
+
+    vim_push_jump(app, view);
+    return view_open_file(app, view, full_name, true);
+}
+
+function b32
+byp_goto_definition(Application_Links *app, View_ID view){
+    Scratch_Block scratch(app);
+    String_Const_u8 query = push_token_or_word_under_active_cursor(app, scratch);
+    if(query.size == 0){ return false; }
+
+    Buffer_ID found_buffer = 0;
+    i64 found_pos = 0;
+    code_index_lock();
+    for(Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
+        buffer != 0 && found_buffer == 0;
+        buffer = get_buffer_next(app, buffer, Access_Always)){
+        Code_Index_File *file = code_index_get_file(buffer);
+        if(file == 0){ continue; }
+        for(i32 i = 0; i < file->note_array.count; i += 1){
+            Code_Index_Note *note = file->note_array.ptrs[i];
+            if(string_match(note->text, query)){
+                found_buffer = buffer;
+                found_pos = note->pos.first;
+                break;
+            }
+        }
+    }
+    code_index_unlock();
+
+    if(found_buffer == 0){ return false; }
+    vim_push_jump(app, view);
+    jump_to_location(app, view, found_buffer, found_pos);
+    return true;
+}
+
+function b32
+byp_goto_matching_file(Application_Links *app, View_ID view, Buffer_ID buffer){
+    Buffer_ID new_buffer = 0;
+    if(!get_cpp_matching_file(app, buffer, &new_buffer)){ return false; }
+    vim_push_jump(app, view);
+    view_set_buffer(app, view, new_buffer, 0);
+    return true;
+}
+
+CUSTOM_COMMAND_SIG(byp_goto)
+CUSTOM_DOC("Opens the file in quotes at the cursor, else jumps to the definition under the cursor, else switches between the matching .h/.cpp file")
+{
+    View_ID view = get_active_view(app, Access_ReadVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+    if(buffer == 0){ return; }
+    i64 pos = view_get_cursor_pos(app, view);
+
+    if(byp_goto_file_in_quotes(app, view, buffer, pos)){ return; }
+    if(byp_goto_definition(app, view)){ return; }
+    byp_goto_matching_file(app, view, buffer);
+}

@@ -1,3 +1,14 @@
 current_dist*/
 distributions/
 .DS_Store
+
+# build outputs
+*.so
+*.dll
+*.pdb
+!build/4ed_app.so
+build/test_build/
+
+# editor backups
+*.bak
+*~
