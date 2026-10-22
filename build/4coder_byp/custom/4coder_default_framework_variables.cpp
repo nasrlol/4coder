@@ -39,42 +39,42 @@ CUSTOM_ID(command_map, mapid_code);
 global b32 allow_immediate_close_without_checking_for_changes = false;
 
 global char *default_extensions[] = {
-    "cpp",
-    "hpp",
-    "c",
-    "h",
-    "cc",
-    "cs",
-    "java",
-    "rs",
-    "glsl",
-    "m",
-};
+ "cpp",
+ "hpp",
+ "c",
+ "h",
+ "cc",
+ "cs",
+ "java",
+ "rs",
+ "glsl",
+ "m",
+ };
 
-#if !defined(AUTO_CENTER_AFTER_JUMPS)
-#define AUTO_CENTER_AFTER_JUMPS true
-#endif
-global b32 auto_center_after_jumps = AUTO_CENTER_AFTER_JUMPS;
-global u8 locked_buffer_space[256];
-global String_Const_u8 locked_buffer = {};
+ #if !defined(AUTO_CENTER_AFTER_JUMPS)
+ #define AUTO_CENTER_AFTER_JUMPS true
+ #endif
+ global b32 auto_center_after_jumps = AUTO_CENTER_AFTER_JUMPS;
+ global u8 locked_buffer_space[256];
+ global String_Const_u8 locked_buffer = {};
 
 
-global View_ID build_footer_panel_view_id = 0;
+ global View_ID build_footer_panel_view_id = 0;
 
-global u8 out_buffer_space[1024];
-global u8 command_space[1024];
-global char hot_directory_space[1024];
+ global u8 out_buffer_space[1024];
+ global u8 command_space[1024];
+ global char hot_directory_space[1024];
 
-global b32 suppressing_mouse = false;
+ global b32 suppressing_mouse = false;
 
-global b32 show_fps_hud = false;
+ global b32 show_fps_hud = false;
 
-// TODO(allen): REMOVE THIS!
-global Heap global_heap;
+ // TODO(allen): REMOVE THIS!
+ global Heap global_heap;
 
-enum{
-    FCoderMode_Original = 0,
-    FCoderMode_NotepadLike = 1,
+ enum{
+ FCoderMode_Original = 0,
+ FCoderMode_NotepadLike = 1,
 };
 global i32 fcoder_mode = FCoderMode_Original;
 

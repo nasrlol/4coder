@@ -48,7 +48,7 @@ default_font_hinting                      = true;
 default_theme_name                        = "theme-nasr";
 default_font_name                         = "liberation-mono.ttf";
 
-default_font_size                         = 24 ;
+default_font_size                         = 15 ;
 
 //- dont care
 

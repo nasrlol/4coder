@@ -27,436 +27,436 @@ CUSTOM_DOC("Toggles between the vim filebar and the stock 4coder filebar")
 CUSTOM_COMMAND_SIG(byp_clear_jumps)
 CUSTOM_DOC("Clears jump buffer")
 {
-    unlock_jump_buffer();
-}
+ unlock_jump_buffer();
+ }
 
-CUSTOM_COMMAND_SIG(byp_close_all_buffers)
-CUSTOM_DOC("Reloads buffers")
-{
-    for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
-         buffer != 0;
-         buffer = get_buffer_next(app, buffer, Access_Always)){
-        if (buffer_has_name_with_star(app, buffer)){ continue; }
-        buffer_kill(app, buffer, BufferKill_AlwaysKill);
-    }
-}
+ CUSTOM_COMMAND_SIG(byp_close_all_buffers)
+ CUSTOM_DOC("Reloads buffers")
+ {
+ for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
+ buffer != 0;
+ buffer = get_buffer_next(app, buffer, Access_Always)){
+ if (buffer_has_name_with_star(app, buffer)){ continue; }
+ buffer_kill(app, buffer, BufferKill_AlwaysKill);
+ }
+ }
 
-CUSTOM_COMMAND_SIG(byp_reload_config)
-CUSTOM_DOC("Reloads config.4coder file")
-{
-    // NOTE(nasr): pass 0 so default_font_size / default_font_hinting come from config.4coder
-    load_config_and_apply(app, &global_config_arena, 0, false);
-}
+ CUSTOM_COMMAND_SIG(byp_reload_config)
+ CUSTOM_DOC("Reloads config.4coder file")
+ {
+ // NOTE(nasr): pass 0 so default_font_size / default_font_hinting come from config.4coder
+ load_config_and_apply(app, &global_config_arena, 0, false);
+ }
 
-CUSTOM_COMMAND_SIG(zbyp_reload_project)
-CUSTOM_DOC("Reloads the project.4coder file")
-{
-    Scratch_Block scratch(app);
-    View_ID view = get_active_view(app, Access_Always);
-    Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
-    String_Const_u8 path = push_buffer_file_name(app, scratch, buffer);
-    String_Const_u8 file = string_front_of_path(path);
-    if (string_match(file, string_u8_litexpr("project.4coder"))){
-        File_Name_Data dump = dump_file(scratch, path);
-        parse_project(app, scratch, dump);
-    }
-}
+ CUSTOM_COMMAND_SIG(zbyp_reload_project)
+ CUSTOM_DOC("Reloads the project.4coder file")
+ {
+ Scratch_Block scratch(app);
+ View_ID view = get_active_view(app, Access_Always);
+ Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
+ String_Const_u8 path = push_buffer_file_name(app, scratch, buffer);
+ String_Const_u8 file = string_front_of_path(path);
+ if (string_match(file, string_u8_litexpr("project.4coder"))){
+ File_Name_Data dump = dump_file(scratch, path);
+ parse_project(app, scratch, dump);
+ }
+ }
 
-CUSTOM_COMMAND_SIG(byp_reopen_all_buffers)
-CUSTOM_DOC("Reload current buffer")
-{
-    View_ID views[32];
-    Buffer_Scroll scrolls[32];
-    i64 count = 0;
+ CUSTOM_COMMAND_SIG(byp_reopen_all_buffers)
+ CUSTOM_DOC("Reload current buffer")
+ {
+ View_ID views[32];
+ Buffer_Scroll scrolls[32];
+ i64 count = 0;
 
-    for (View_ID view = get_view_next(app, 0, Access_Always);
-         view != 0;
-         view = get_view_next(app, view, Access_Always)){
-        i64 idx = count++;
-        views[idx] = view;
-        scrolls[idx] = view_get_buffer_scroll(app, view);
-    }
+ for (View_ID view = get_view_next(app, 0, Access_Always);
+ view != 0;
+ view = get_view_next(app, view, Access_Always)){
+ i64 idx = count++;
+ views[idx] = view;
+ scrolls[idx] = view_get_buffer_scroll(app, view);
+ }
 
-    for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
-         buffer != 0;
-         buffer = get_buffer_next(app, buffer, Access_Always)){
-        if (buffer_has_name_with_star(app, buffer)){ continue; }
-        if (buffer_get_dirty_state(app, buffer) == DirtyState_UpToDate){ continue; }
-        buffer_reopen(app, buffer, 0);
-    }
+ for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
+ buffer != 0;
+ buffer = get_buffer_next(app, buffer, Access_Always)){
+ if (buffer_has_name_with_star(app, buffer)){ continue; }
+ if (buffer_get_dirty_state(app, buffer) == DirtyState_UpToDate){ continue; }
+ buffer_reopen(app, buffer, 0);
+ }
 
-    foreach(i, count){
-        view_set_buffer_scroll(app, views[i], scrolls[i], SetBufferScroll_NoCursorChange);
-    }
-}
+ foreach(i, count){
+ view_set_buffer_scroll(app, views[i], scrolls[i], SetBufferScroll_NoCursorChange);
+ }
+ }
 
-CUSTOM_COMMAND_SIG(trim_leading_ws)
-CUSTOM_DOC("Trims all leading ws")
-{
-    View_ID view = get_active_view(app, Access_ReadWrite);
-    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWrite);
-    trim_leading_whitespace(app, buffer);
-}
+ CUSTOM_COMMAND_SIG(trim_leading_ws)
+ CUSTOM_DOC("Trims all leading ws")
+ {
+ View_ID view = get_active_view(app, Access_ReadWrite);
+ Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWrite);
+ trim_leading_whitespace(app, buffer);
+ }
 
-CUSTOM_COMMAND_SIG(format_all_buffers)
-CUSTOM_DOC("Auto-indent and remove blank lines for all loaded buffers")
-{
-    for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWrite);
-         buffer != 0;
-         buffer = get_buffer_next(app, buffer, Access_ReadWrite)){
-        if (buffer_has_name_with_star(app, buffer)){ continue; }
-        byp_reformat_buffer(app, buffer);
-        //clean_all_lines_buffer(app, buffer, CleanAllLinesMode_RemoveBlankLines);
-    }
-    save_all_dirty_buffers(app);
-}
-
-
-CUSTOM_COMMAND_SIG(byp_reset_face_size)
-CUSTOM_DOC("Resets face size to default")
-{
-    View_ID view = get_active_view(app, Access_Always);
-    Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
-    Face_ID face_id = get_face_id(app, buffer);
-    Face_Description description = get_face_description(app, face_id);
-    description.parameters.pt_size = (i32)def_get_config_u64(app, vars_save_string_lit("default_font_size"));
-    try_modify_face(app, face_id, &description);
-}
-
-// TODO: This should probably be scoped per_view and know the buffer it refers to,
-// but that's to much of a fuss for something so small
-global Buffer_Cursor byp_col_cursor;
-
-CUSTOM_COMMAND_SIG(byp_toggle_set_col_ruler)
-CUSTOM_DOC("Toggles the column ruler. Set to cursor column when on.")
-{
-    View_ID view = get_active_view(app, Access_ReadVisible);
-    if(byp_col_cursor.pos == 0){
-        Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
-        i64 pos = view_get_cursor_pos(app, view);
-        byp_col_cursor = view_compute_cursor(app, view, seek_pos(pos));
-        vim_state.params.seek = {buffer_get_char(app, buffer, pos), VIM_Inclusive, -1};
-    }else{
-        byp_col_cursor = Buffer_Cursor{};
-    }
-}
-
-global b32 byp_bracket_opened;
-
-CUSTOM_COMMAND_SIG(byp_write_text_input)
-CUSTOM_DOC("Inserts whatever text was used to trigger this command.")
-{
-    User_Input in = get_current_input(app);
-    String_Const_u8 insert = to_writable(&in);
-    byp_bracket_opened = insert.str[insert.size-1] == '{';
-    write_text(app, insert);
-}
-
-CUSTOM_COMMAND_SIG(byp_auto_complete_bracket)
-CUSTOM_DOC("Sets the right size of the view near the x position of the cursor.")
-{
-    View_ID view = get_active_view(app, Access_ReadWriteVisible);
-    i64 pos = view_get_character_legal_pos_from_pos(app, view, view_get_cursor_pos(app, view));
-    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
-    Token_Array token_array = get_token_array_from_buffer(app, buffer);
-    do{
-        if(token_array.tokens == 0){
-            if(byp_bracket_opened){
-                write_text(app, string_u8_litexpr("\n\n}"));
-                move_up(app);
-                byp_bracket_opened = 0;
-                return;
-            }else{
-                break;
-            }
-        }
-
-        i64 first_index = token_index_from_pos(&token_array, pos);
-        Token_Iterator_Array it = token_iterator_index(0, token_array.tokens, token_array.count, first_index);
-        if(!token_it_dec(&it)){ break; }
-
-        Token *token = token_it_read(&it);
-        if(token && byp_bracket_opened && buffer_get_char(app, buffer, token->pos) == '{'){
-            token_it_dec(&it);
-            token = token_it_read(&it);
-            if(token->kind == TokenBaseKind_Identifier){
-                if(!token_it_dec(&it)){ break; }
-                token = token_it_read(&it);
-            }
-            String_Const_u8 insert = string_u8_litexpr("\n\n};");
-            insert.size -= (token->kind != byp_TokenKind_Struct);
-            write_text(app, insert);
-            move_up(app);
-            byp_bracket_opened = 0;
-            return;
-        }
-    }while(0);
-
-    write_text(app, string_u8_litexpr("\n"));
-    byp_bracket_opened = 0;
-}
-
-function bool
-byp_is_divider(String_Const_u8 lexeme){
-    return (string_has_prefix(lexeme, string_u8_litexpr("//-"))  ||
-            string_has_prefix(lexeme, string_u8_litexpr("// -")) ||
-            string_has_prefix(lexeme, string_u8_litexpr("// ~")) ||
-            string_has_prefix(lexeme, string_u8_litexpr("//~")) ||
-            string_has_prefix(lexeme, string_u8_litexpr("//--")));
-}
-
-function void
-byp_find_divider(Application_Links *app, Scan_Direction direction){
-    View_ID view = get_active_view(app, Access_ReadVisible);
-    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
-    Token_Array tokens = get_token_array_from_buffer(app, buffer);
-    if (tokens.tokens == 0){ return; }
-
-    i64 pos = view_get_cursor_pos(app, view);
-    Token_Iterator_Array it = token_iterator_pos(buffer, &tokens, pos);
-    for (;;){
-        Scratch_Block scratch(app);
-        Token *token = token_it_read(&it);
-        String_Const_u8 lexeme = {};
-
-        b32 valid_dir = ((token->pos < pos && direction == Scan_Backward) ||
-                         (token->pos > pos && direction == Scan_Forward));
-        b32 has_lexeme = token_it_check_and_get_lexeme(app, scratch, &it, TokenBaseKind_Comment, &lexeme);
-
-        if (valid_dir && has_lexeme && byp_is_divider(lexeme)){
-            view_set_cursor(app, view, seek_pos(token->pos));
-            return;
-        }
-
-        b32 has_next = (direction == Scan_Forward ?
-                        token_it_inc_non_whitespace(&it) :
-                        token_it_dec_non_whitespace(&it));
-        if (!has_next){ break; }
-    }
-}
-
-CUSTOM_COMMAND_SIG(byp_find_divider_up)
-CUSTOM_DOC("Find //- divider above cursor")
-{
-    byp_find_divider(app, Scan_Backward);
-}
-
-CUSTOM_COMMAND_SIG(byp_find_divider_down)
-CUSTOM_DOC("Find //- divider below cursor")
-{
-    byp_find_divider(app, Scan_Forward);
-}
-
-CUSTOM_COMMAND_SIG(explorer)
-CUSTOM_DOC("Opens file explorer in hot directory")
-{
-    Scratch_Block scratch(app);
-    String_Const_u8 hot = push_hot_directory(app, scratch);
-    exec_system_command(app, 0, buffer_identifier(0), hot, string_u8_litexpr("explorer ."), 0);
-}
-
-function void
-byp_load_theme(String_Const_u8 theme_name){
-    Color_Table *table_ptr = get_color_table_by_name(theme_name);
-    if(table_ptr){ byp_copy_color_table(&target_color_table, *table_ptr); }
-}
-
-global Vim_Buffer_Peek_Entry BYP_peek_list[VIM_ADDITIONAL_PEEK] = {
-    { buffer_identifier(string_u8_litexpr("*scratch*")), 1.f, 1.f },
-    { buffer_identifier(string_u8_litexpr("todo.txt")),  1.f, 1.f },
-};
-
-CUSTOM_COMMAND_SIG(byp_list_all_locations_selection)
-CUSTOM_DOC("Lists locations of selection range")
-{
-    vim_normal_mode(app);
-    View_ID view = get_active_view(app, Access_ReadVisible);
-    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
-    Range_i64 range = get_view_range(app, view);
-    range.max++;
-
-    Scratch_Block scratch(app);
-    String_Const_u8 range_string = push_buffer_range(app, scratch, buffer, range);
-    list_all_locations__generic(app, range_string, ListAllLocationsFlag_CaseSensitive|ListAllLocationsFlag_MatchSubstring);
-}
-
-CUSTOM_COMMAND_SIG(byp_open_current_peek)
-CUSTOM_DOC("Sets the active view to the current peeked buffer")
-{
-    View_ID view = get_active_view(app, Access_ReadWriteVisible);
-    Buffer_ID buffer = buffer_identifier_to_id(app, vim_buffer_peek_list[vim_buffer_peek_index].buffer_id);
-    view_set_buffer(app, view, buffer, SetBuffer_KeepOriginalGUI);
-    vim_show_buffer_peek = 1;
-    vim_toggle_show_buffer_peek(app);
-}
-
-VIM_TEXT_OBJECT_SIG(byp_object_param){
-    u8 c = buffer_get_char(app, buffer, cursor_pos);
-    Range_i64 range = Ii64(cursor_pos + (c == ',' || c == ';'));
-
-    for(; range.min>0; range.min--){
-        c = buffer_get_char(app, buffer, range.min);
-        if(c == ',' || c == ';'){ break; }
-        Scan_Direction bounce = vim_bounce_direction(c);
-        if(bounce == Scan_Forward){ break; }
-        if(bounce == Scan_Backward){
-            range.min = vim_bounce_pair(app, buffer, range.min, c)-1;
-            continue;
-        }
-    }
-
-    i64 buffer_size = buffer_get_size(app, buffer);
-    for(; range.max < buffer_size; range.max++){
-        c = buffer_get_char(app, buffer, range.max);
-        if(c == ',' || c == ';'){ break; }
-        Scan_Direction bounce = vim_bounce_direction(c);
-        if(bounce == Scan_Backward){ break; }
-        if(bounce == Scan_Forward){
-            range.max = vim_bounce_pair(app, buffer, range.max, c);
-            continue;
-        }
-    }
-    range.min++; range.max--;
-    if(range.min >= range.max){ range = {}; }
-
-    return range;
-}
-
-VIM_TEXT_OBJECT_SIG(byp_object_camel){
-    Range_i64 range = {};
-    Scratch_Block scratch(app);
-    Range_i64 line_range = get_line_range_from_pos(app, buffer, cursor_pos);
-    i64 s = line_range.min;
-    u8 *line_text = push_buffer_range(app, scratch, buffer, line_range).str;
-    u8 c = line_text[cursor_pos-s];
-    if(!character_is_alpha_numeric(c)){ return {}; }
-    cursor_pos += line_text[cursor_pos-s] == '_';
-    range.min = range.max = cursor_pos;
-
-    b32 valid=false;
-    for(; range.min>0; range.min--){
-        c = line_text[range.min-s];
-        if(!character_is_alpha_numeric(c) || c == '_'){ valid = true; break; }
-    }
-    if(!valid){ return {}; }
-
-    valid=false;
-    for(; range.max>0; range.max++){
-        c = line_text[range.max-s];
-        if(!character_is_alpha_numeric(c) || c == '_'){ valid = true; break; }
-    }
-    if(!valid){ return {}; }
-
-    range.min += (vim_state.params.clusivity != VIM_Inclusive || line_text[range.min-s] != '_');
-    range.max -= (vim_state.params.clusivity != VIM_Inclusive || line_text[range.max-s] != '_');
-    if(range.min >= range.max){ range = {}; }
-
-    return range;
-}
-
-function void byp_make_vim_request(Application_Links *app, BYP_Vim_Request request){
-    vim_make_request(app, Vim_Request_Type(VIM_REQUEST_COUNT + request));
-}
-
-VIM_REQUEST_SIG(byp_apply_title){
-    Scratch_Block scratch(app);
-    String_Const_u8 text = push_buffer_range(app, scratch, buffer, range);
-    u8 prev = buffer_get_char(app, buffer, range.min-1);
-    foreach(i, text.size){
-        text.str[i] += u8(i32('A' - 'a')*((!character_is_alpha(prev) || prev == '_') &&
-                                          character_is_lower(text.str[i])));
-        prev = text.str[i];
-    }
-    buffer_replace_range(app, buffer, range, text);
-    buffer_post_fade(app, buffer, 0.667f, range, fcolor_resolve(fcolor_id(defcolor_paste)));
-}
-
-VIM_COMMAND_SIG(byp_request_title){ byp_make_vim_request(app, BYP_REQUEST_Title); }
+ CUSTOM_COMMAND_SIG(format_all_buffers)
+ CUSTOM_DOC("Auto-indent and remove blank lines for all loaded buffers")
+ {
+ for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWrite);
+ buffer != 0;
+ buffer = get_buffer_next(app, buffer, Access_ReadWrite)){
+ if (buffer_has_name_with_star(app, buffer)){ continue; }
+ byp_reformat_buffer(app, buffer);
+ //clean_all_lines_buffer(app, buffer, CleanAllLinesMode_RemoveBlankLines);
+ }
+ save_all_dirty_buffers(app);
+ }
 
 
-// NOTE: Ctrl-W tries, in order: the file named in the quotes around the cursor,
-// the definition of the identifier under the cursor, then the matching .h/.cpp.
-// Everything opens in the current panel so Ctrl-O can come back.
-function b32
-byp_goto_file_in_quotes(Application_Links *app, View_ID view, Buffer_ID buffer, i64 pos){
-    Scratch_Block scratch(app);
-    i64 line = get_line_number_from_pos(app, buffer, pos);
-    Range_i64 line_range = get_line_pos_range(app, buffer, line);
-    String_Const_u8 text = push_buffer_range(app, scratch, buffer, line_range);
-    i64 cursor = pos - line_range.min;
+ CUSTOM_COMMAND_SIG(byp_reset_face_size)
+ CUSTOM_DOC("Resets face size to default")
+ {
+ View_ID view = get_active_view(app, Access_Always);
+ Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
+ Face_ID face_id = get_face_id(app, buffer);
+ Face_Description description = get_face_description(app, face_id);
+ description.parameters.pt_size = (i32)def_get_config_u64(app, vars_save_string_lit("default_font_size"));
+ try_modify_face(app, face_id, &description);
+ }
 
-    i64 open = -1;
-    for(i64 i = Min(cursor, (i64)text.size - 1); i >= 0; i -= 1){
-        if(text.str[i] == '"'){ open = i; break; }
-    }
-    if(open < 0 || open == cursor){ return false; }
-    i64 close = -1;
-    for(i64 i = Max(cursor, open + 1); i < (i64)text.size; i += 1){
-        if(text.str[i] == '"'){ close = i; break; }
-    }
-    if(close <= open + 1){ return false; }
+ // TODO: This should probably be scoped per_view and know the buffer it refers to,
+ // but that's to much of a fuss for something so small
+ global Buffer_Cursor byp_col_cursor;
 
-    String_Const_u8 quoted_name = string_substring(text, Ii64(open + 1, close));
-    String_Const_u8 path = string_remove_last_folder(push_buffer_file_name(app, scratch, buffer));
-    if(path.size > 0 && character_is_slash(string_get_character(path, path.size - 1))){
-        path = string_chop(path, 1);
-    }
-    String_Const_u8 full_name = push_u8_stringf(scratch, "%.*s/%.*s", string_expand(path), string_expand(quoted_name));
-    if(!file_exists_and_is_file(app, full_name)){ return false; }
+ CUSTOM_COMMAND_SIG(byp_toggle_set_col_ruler)
+ CUSTOM_DOC("Toggles the column ruler. Set to cursor column when on.")
+ {
+ View_ID view = get_active_view(app, Access_ReadVisible);
+ if(byp_col_cursor.pos == 0){
+ Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+ i64 pos = view_get_cursor_pos(app, view);
+ byp_col_cursor = view_compute_cursor(app, view, seek_pos(pos));
+ vim_state.params.seek = {buffer_get_char(app, buffer, pos), VIM_Inclusive, -1};
+ }else{
+ byp_col_cursor = Buffer_Cursor{};
+ }
+ }
 
-    vim_push_jump(app, view);
-    return view_open_file(app, view, full_name, true);
-}
+ global b32 byp_bracket_opened;
 
-function b32
-byp_goto_definition(Application_Links *app, View_ID view){
-    Scratch_Block scratch(app);
-    String_Const_u8 query = push_token_or_word_under_active_cursor(app, scratch);
-    if(query.size == 0){ return false; }
+ CUSTOM_COMMAND_SIG(byp_write_text_input)
+ CUSTOM_DOC("Inserts whatever text was used to trigger this command.")
+ {
+ User_Input in = get_current_input(app);
+ String_Const_u8 insert = to_writable(&in);
+ byp_bracket_opened = insert.str[insert.size-1] == '{';
+ write_text(app, insert);
+ }
 
-    Buffer_ID found_buffer = 0;
-    i64 found_pos = 0;
-    code_index_lock();
-    for(Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
-        buffer != 0 && found_buffer == 0;
-        buffer = get_buffer_next(app, buffer, Access_Always)){
-        Code_Index_File *file = code_index_get_file(buffer);
-        if(file == 0){ continue; }
-        for(i32 i = 0; i < file->note_array.count; i += 1){
-            Code_Index_Note *note = file->note_array.ptrs[i];
-            if(string_match(note->text, query)){
-                found_buffer = buffer;
-                found_pos = note->pos.first;
-                break;
-            }
-        }
-    }
-    code_index_unlock();
+ CUSTOM_COMMAND_SIG(byp_auto_complete_bracket)
+ CUSTOM_DOC("Sets the right size of the view near the x position of the cursor.")
+ {
+ View_ID view = get_active_view(app, Access_ReadWriteVisible);
+ i64 pos = view_get_character_legal_pos_from_pos(app, view, view_get_cursor_pos(app, view));
+ Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+ Token_Array token_array = get_token_array_from_buffer(app, buffer);
+ do{
+ if(token_array.tokens == 0){
+ if(byp_bracket_opened){
+ write_text(app, string_u8_litexpr("\n\n}"));
+ move_up(app);
+ byp_bracket_opened = 0;
+ return;
+ }else{
+ break;
+ }
+ }
 
-    if(found_buffer == 0){ return false; }
-    vim_push_jump(app, view);
-    jump_to_location(app, view, found_buffer, found_pos);
-    return true;
-}
+ i64 first_index = token_index_from_pos(&token_array, pos);
+ Token_Iterator_Array it = token_iterator_index(0, token_array.tokens, token_array.count, first_index);
+ if(!token_it_dec(&it)){ break; }
 
-function b32
-byp_goto_matching_file(Application_Links *app, View_ID view, Buffer_ID buffer){
-    Buffer_ID new_buffer = 0;
-    if(!get_cpp_matching_file(app, buffer, &new_buffer)){ return false; }
-    vim_push_jump(app, view);
-    view_set_buffer(app, view, new_buffer, 0);
-    return true;
-}
+ Token *token = token_it_read(&it);
+ if(token && byp_bracket_opened && buffer_get_char(app, buffer, token->pos) == '{'){
+ token_it_dec(&it);
+ token = token_it_read(&it);
+ if(token->kind == TokenBaseKind_Identifier){
+ if(!token_it_dec(&it)){ break; }
+ token = token_it_read(&it);
+ }
+ String_Const_u8 insert = string_u8_litexpr("\n\n};");
+ insert.size -= (token->kind != byp_TokenKind_Struct);
+ write_text(app, insert);
+ move_up(app);
+ byp_bracket_opened = 0;
+ return;
+ }
+ }while(0);
 
-CUSTOM_COMMAND_SIG(byp_goto)
-CUSTOM_DOC("Opens the file in quotes at the cursor, else jumps to the definition under the cursor, else switches between the matching .h/.cpp file")
-{
-    View_ID view = get_active_view(app, Access_ReadVisible);
-    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
-    if(buffer == 0){ return; }
-    i64 pos = view_get_cursor_pos(app, view);
+ write_text(app, string_u8_litexpr("\n"));
+ byp_bracket_opened = 0;
+ }
 
-    if(byp_goto_file_in_quotes(app, view, buffer, pos)){ return; }
-    if(byp_goto_definition(app, view)){ return; }
-    byp_goto_matching_file(app, view, buffer);
+ function bool
+ byp_is_divider(String_Const_u8 lexeme){
+ return (string_has_prefix(lexeme, string_u8_litexpr("//-"))  ||
+ string_has_prefix(lexeme, string_u8_litexpr("// -")) ||
+ string_has_prefix(lexeme, string_u8_litexpr("// ~")) ||
+ string_has_prefix(lexeme, string_u8_litexpr("//~")) ||
+ string_has_prefix(lexeme, string_u8_litexpr("//--")));
+ }
+
+ function void
+ byp_find_divider(Application_Links *app, Scan_Direction direction){
+ View_ID view = get_active_view(app, Access_ReadVisible);
+ Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+ Token_Array tokens = get_token_array_from_buffer(app, buffer);
+ if (tokens.tokens == 0){ return; }
+
+ i64 pos = view_get_cursor_pos(app, view);
+ Token_Iterator_Array it = token_iterator_pos(buffer, &tokens, pos);
+ for (;;){
+ Scratch_Block scratch(app);
+ Token *token = token_it_read(&it);
+ String_Const_u8 lexeme = {};
+
+ b32 valid_dir = ((token->pos < pos && direction == Scan_Backward) ||
+ (token->pos > pos && direction == Scan_Forward));
+ b32 has_lexeme = token_it_check_and_get_lexeme(app, scratch, &it, TokenBaseKind_Comment, &lexeme);
+
+ if (valid_dir && has_lexeme && byp_is_divider(lexeme)){
+ view_set_cursor(app, view, seek_pos(token->pos));
+ return;
+ }
+
+ b32 has_next = (direction == Scan_Forward ?
+ token_it_inc_non_whitespace(&it) :
+ token_it_dec_non_whitespace(&it));
+ if (!has_next){ break; }
+ }
+ }
+
+ CUSTOM_COMMAND_SIG(byp_find_divider_up)
+ CUSTOM_DOC("Find //- divider above cursor")
+ {
+ byp_find_divider(app, Scan_Backward);
+ }
+
+ CUSTOM_COMMAND_SIG(byp_find_divider_down)
+ CUSTOM_DOC("Find //- divider below cursor")
+ {
+ byp_find_divider(app, Scan_Forward);
+ }
+
+ CUSTOM_COMMAND_SIG(explorer)
+ CUSTOM_DOC("Opens file explorer in hot directory")
+ {
+ Scratch_Block scratch(app);
+ String_Const_u8 hot = push_hot_directory(app, scratch);
+ exec_system_command(app, 0, buffer_identifier(0), hot, string_u8_litexpr("explorer ."), 0);
+ }
+
+ function void
+ byp_load_theme(String_Const_u8 theme_name){
+ Color_Table *table_ptr = get_color_table_by_name(theme_name);
+ if(table_ptr){ byp_copy_color_table(&target_color_table, *table_ptr); }
+ }
+
+ global Vim_Buffer_Peek_Entry BYP_peek_list[VIM_ADDITIONAL_PEEK] = {
+ { buffer_identifier(string_u8_litexpr("*scratch*")), 1.f, 1.f },
+ { buffer_identifier(string_u8_litexpr("todo.txt")),  1.f, 1.f },
+ };
+
+ CUSTOM_COMMAND_SIG(byp_list_all_locations_selection)
+ CUSTOM_DOC("Lists locations of selection range")
+ {
+ vim_normal_mode(app);
+ View_ID view = get_active_view(app, Access_ReadVisible);
+ Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+ Range_i64 range = get_view_range(app, view);
+ range.max++;
+
+ Scratch_Block scratch(app);
+ String_Const_u8 range_string = push_buffer_range(app, scratch, buffer, range);
+ list_all_locations__generic(app, range_string, ListAllLocationsFlag_CaseSensitive|ListAllLocationsFlag_MatchSubstring);
+ }
+
+ CUSTOM_COMMAND_SIG(byp_open_current_peek)
+ CUSTOM_DOC("Sets the active view to the current peeked buffer")
+ {
+ View_ID view = get_active_view(app, Access_ReadWriteVisible);
+ Buffer_ID buffer = buffer_identifier_to_id(app, vim_buffer_peek_list[vim_buffer_peek_index].buffer_id);
+ view_set_buffer(app, view, buffer, SetBuffer_KeepOriginalGUI);
+ vim_show_buffer_peek = 1;
+ vim_toggle_show_buffer_peek(app);
+ }
+
+ VIM_TEXT_OBJECT_SIG(byp_object_param){
+ u8 c = buffer_get_char(app, buffer, cursor_pos);
+ Range_i64 range = Ii64(cursor_pos + (c == ',' || c == ';'));
+
+ for(; range.min>0; range.min--){
+ c = buffer_get_char(app, buffer, range.min);
+ if(c == ',' || c == ';'){ break; }
+ Scan_Direction bounce = vim_bounce_direction(c);
+ if(bounce == Scan_Forward){ break; }
+ if(bounce == Scan_Backward){
+ range.min = vim_bounce_pair(app, buffer, range.min, c)-1;
+ continue;
+ }
+ }
+
+ i64 buffer_size = buffer_get_size(app, buffer);
+ for(; range.max < buffer_size; range.max++){
+ c = buffer_get_char(app, buffer, range.max);
+ if(c == ',' || c == ';'){ break; }
+ Scan_Direction bounce = vim_bounce_direction(c);
+ if(bounce == Scan_Backward){ break; }
+ if(bounce == Scan_Forward){
+ range.max = vim_bounce_pair(app, buffer, range.max, c);
+ continue;
+ }
+ }
+ range.min++; range.max--;
+ if(range.min >= range.max){ range = {}; }
+
+ return range;
+ }
+
+ VIM_TEXT_OBJECT_SIG(byp_object_camel){
+ Range_i64 range = {};
+ Scratch_Block scratch(app);
+ Range_i64 line_range = get_line_range_from_pos(app, buffer, cursor_pos);
+ i64 s = line_range.min;
+ u8 *line_text = push_buffer_range(app, scratch, buffer, line_range).str;
+ u8 c = line_text[cursor_pos-s];
+ if(!character_is_alpha_numeric(c)){ return {}; }
+ cursor_pos += line_text[cursor_pos-s] == '_';
+ range.min = range.max = cursor_pos;
+
+ b32 valid=false;
+ for(; range.min>0; range.min--){
+ c = line_text[range.min-s];
+ if(!character_is_alpha_numeric(c) || c == '_'){ valid = true; break; }
+ }
+ if(!valid){ return {}; }
+
+ valid=false;
+ for(; range.max>0; range.max++){
+ c = line_text[range.max-s];
+ if(!character_is_alpha_numeric(c) || c == '_'){ valid = true; break; }
+ }
+ if(!valid){ return {}; }
+
+ range.min += (vim_state.params.clusivity != VIM_Inclusive || line_text[range.min-s] != '_');
+ range.max -= (vim_state.params.clusivity != VIM_Inclusive || line_text[range.max-s] != '_');
+ if(range.min >= range.max){ range = {}; }
+
+ return range;
+ }
+
+ function void byp_make_vim_request(Application_Links *app, BYP_Vim_Request request){
+ vim_make_request(app, Vim_Request_Type(VIM_REQUEST_COUNT + request));
+ }
+
+ VIM_REQUEST_SIG(byp_apply_title){
+ Scratch_Block scratch(app);
+ String_Const_u8 text = push_buffer_range(app, scratch, buffer, range);
+ u8 prev = buffer_get_char(app, buffer, range.min-1);
+ foreach(i, text.size){
+ text.str[i] += u8(i32('A' - 'a')*((!character_is_alpha(prev) || prev == '_') &&
+ character_is_lower(text.str[i])));
+ prev = text.str[i];
+ }
+ buffer_replace_range(app, buffer, range, text);
+ buffer_post_fade(app, buffer, 0.667f, range, fcolor_resolve(fcolor_id(defcolor_paste)));
+ }
+
+ VIM_COMMAND_SIG(byp_request_title){ byp_make_vim_request(app, BYP_REQUEST_Title); }
+
+
+ // NOTE: Ctrl-W tries, in order: the file named in the quotes around the cursor,
+ // the definition of the identifier under the cursor, then the matching .h/.cpp.
+ // Everything opens in the current panel so Ctrl-O can come back.
+ function b32
+ byp_goto_file_in_quotes(Application_Links *app, View_ID view, Buffer_ID buffer, i64 pos){
+ Scratch_Block scratch(app);
+ i64 line = get_line_number_from_pos(app, buffer, pos);
+ Range_i64 line_range = get_line_pos_range(app, buffer, line);
+ String_Const_u8 text = push_buffer_range(app, scratch, buffer, line_range);
+ i64 cursor = pos - line_range.min;
+
+ i64 open = -1;
+ for(i64 i = Min(cursor, (i64)text.size - 1); i >= 0; i -= 1){
+ if(text.str[i] == '"'){ open = i; break; }
+ }
+ if(open < 0 || open == cursor){ return false; }
+ i64 close = -1;
+ for(i64 i = Max(cursor, open + 1); i < (i64)text.size; i += 1){
+ if(text.str[i] == '"'){ close = i; break; }
+ }
+ if(close <= open + 1){ return false; }
+
+ String_Const_u8 quoted_name = string_substring(text, Ii64(open + 1, close));
+ String_Const_u8 path = string_remove_last_folder(push_buffer_file_name(app, scratch, buffer));
+ if(path.size > 0 && character_is_slash(string_get_character(path, path.size - 1))){
+ path = string_chop(path, 1);
+ }
+ String_Const_u8 full_name = push_u8_stringf(scratch, "%.*s/%.*s", string_expand(path), string_expand(quoted_name));
+ if(!file_exists_and_is_file(app, full_name)){ return false; }
+
+ vim_push_jump(app, view);
+ return view_open_file(app, view, full_name, true);
+ }
+
+ function b32
+ byp_goto_definition(Application_Links *app, View_ID view){
+ Scratch_Block scratch(app);
+ String_Const_u8 query = push_token_or_word_under_active_cursor(app, scratch);
+ if(query.size == 0){ return false; }
+
+ Buffer_ID found_buffer = 0;
+ i64 found_pos = 0;
+ code_index_lock();
+ for(Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
+ buffer != 0 && found_buffer == 0;
+ buffer = get_buffer_next(app, buffer, Access_Always)){
+ Code_Index_File *file = code_index_get_file(buffer);
+ if(file == 0){ continue; }
+ for(i32 i = 0; i < file->note_array.count; i += 1){
+ Code_Index_Note *note = file->note_array.ptrs[i];
+ if(string_match(note->text, query)){
+ found_buffer = buffer;
+ found_pos = note->pos.first;
+ break;
+ }
+ }
+ }
+ code_index_unlock();
+
+ if(found_buffer == 0){ return false; }
+ vim_push_jump(app, view);
+ jump_to_location(app, view, found_buffer, found_pos);
+ return true;
+ }
+
+ function b32
+ byp_goto_matching_file(Application_Links *app, View_ID view, Buffer_ID buffer){
+ Buffer_ID new_buffer = 0;
+ if(!get_cpp_matching_file(app, buffer, &new_buffer)){ return false; }
+ vim_push_jump(app, view);
+ view_set_buffer(app, view, new_buffer, 0);
+ return true;
+ }
+
+ CUSTOM_COMMAND_SIG(byp_goto)
+ CUSTOM_DOC("Opens the file in quotes at the cursor, else jumps to the definition under the cursor, else switches between the matching .h/.cpp file")
+ {
+ View_ID view = get_active_view(app, Access_ReadVisible);
+ Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+ if(buffer == 0){ return; }
+ i64 pos = view_get_cursor_pos(app, view);
+
+ if(byp_goto_file_in_quotes(app, view, buffer, pos)){ return; }
+ if(byp_goto_definition(app, view)){ return; }
+ byp_goto_matching_file(app, view, buffer);
 }
