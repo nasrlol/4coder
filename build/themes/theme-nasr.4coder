@@ -12,8 +12,8 @@ defcolor_cursor                     = { 0xFFC4A882, 0xFFB86030 };
 
 defcolor_at_cursor                  = 0xFF111111;
 
-nasr_vim_cursor_normal              =  0xFF8A0000;
-nasr_vim_cursor_insert              = 0xFFf0a882;
+nasr_vim_cursor_normal              =  0xFF00aa00;
+nasr_vim_cursor_insert              = 0xFFf0ff82;
 
 nasr_vim_cursor_visual              = 0xFFC48050;
 
