@@ -12,7 +12,7 @@ defcolor_cursor                     = { 0xFFC4A882, 0xFFB86030 };
 
 defcolor_at_cursor                  = 0xFF111111;
 
-nasr_vim_cursor_normal              = 0xFFfaAA2A;
+nasr_vim_cursor_normal              =  0xFF8A0000;
 nasr_vim_cursor_insert              = 0xFFf0a882;
 
 nasr_vim_cursor_visual              = 0xFFC48050;
@@ -30,8 +30,8 @@ defcolor_at_highlight               = 0xFFD9C6A5;
 defcolor_text_default               =  0xFFC4A882;
 defcolor_text_cycle                 = {0xFFC4A882, 0xFFC4A882, 0xFFC4A882, 0xFFC4A882};
 
-defcolor_comment                    =  0xFFC4A882;
-defcolor_comment_pop                = {0xFFC4A882, 0xFFC4A882};
+defcolor_comment                    =  0xFF999999;
+defcolor_comment_pop                = {0xFFC4A002, 0xFFC04800};
 
 defcolor_str_constant               =  0xFFB86030;
 defcolor_char_constant              =  defcolor_str_constant;
@@ -63,7 +63,7 @@ defcolor_global                     = defcolor_text_default;
 defcolor_control                    = defcolor_keyword;
 defcolor_function                   = 0xFFC4A882;
 defcolor_macro                      = defcolor_keyword;
-defcolor_non_text                   = 0xFF6B5A45;
+defcolor_non_text                   = 0xFFC4A882;
 
 defcolor_vim_filebar_pop            =  0xFFc4a882;
 defcolor_bar                        =  0xFFc4a882;

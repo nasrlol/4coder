@@ -6,7 +6,7 @@ bind_by_physical_key                      = true;
 //- ui
 use_scroll_bars                           = false;
 use_file_bars                             = true;
-hide_file_bar_in_ui                       = true;
+hide_file_bar_in_ui                       = false;
 
 use_error_highlight                       = true;
 use_jump_highlight                        = true;
@@ -35,7 +35,7 @@ automatically_load_project                = true;
 
 //- indentation
 enable_virtual_whitespace                 = true;
-virtual_whitespace_regular_indent         = 4;
+virtual_whitespace_regular_indent         = 1;
 
 indent_with_tabs                          = true;
 indent_width                              = 4;
