@@ -43,6 +43,7 @@ CUSTOM_ID(colors, nasr_vim_cursor_visual);
 #include "4coder_byp_colors.cpp"
 #include "4coder_byp_reformat.cpp"
 #include "4coder_byp_commands.cpp"
+#include "4coder_byp_tabs.cpp"
 
 #include "4coder_byp_struct_context.cpp"
 #include "4coder_byp_draw.cpp"

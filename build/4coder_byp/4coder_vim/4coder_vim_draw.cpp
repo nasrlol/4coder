@@ -1175,11 +1175,29 @@ internal int BitOffset(u32 value) {
 
  if(vim_lister_view_id == 0){
  /// NOTE(BYP): This is kinda a hacky pseudo-view
- if(vim_show_buffer_peek && rect_height(back_rect) > 0.f){
+ if(rect_height(back_rect) > 0.f){
  Vim_Buffer_Peek_Entry *entry = vim_buffer_peek_list + vim_buffer_peek_index;
  Buffer_Identifier buffer_iden = entry->buffer_id;
  Buffer_ID buffer = buffer_identifier_to_id(app, buffer_iden);
- vim_set_bottom_text(SCu8((u8 *)buffer_iden.name, buffer_iden.name_len));
+
+ // NOTE(nasr): title strip at the top of the peek; stays visible when the peek is hidden
+ Rect_f32_Pair header_pair = rect_split_top_bottom(back_rect, vim_peek_header_height(app));
+ Rect_f32 header_rect = header_pair.a;
+ nasr_draw_rect(app, header_rect, 0.f, fcolor_resolve(fcolor_id(defcolor_margin)));
+ nasr_draw_rect(app, rect_split_top_bottom(header_rect, 2.f).a, 0.f, fcolor_resolve(get_item_margin_color(UIHighlight_Active)));
+ {
+ Rect_f32 prev_clip = draw_set_clip(app, header_rect);
+ Vec2_f32 p = {header_rect.x0 + 8.f, header_rect.y0 + 4.f};
+ draw_string(app, face_id, SCu8((u8 *)buffer_iden.name, buffer_iden.name_len), p, finalize_color(defcolor_text_default, 0));
+ draw_set_clip(app, prev_clip);
+ }
+ back_rect = header_pair.b;
+ }
+ // NOTE(nasr): draw the peek contents even when collapsed, so the first lines stay visible
+ if(rect_height(back_rect) > 0.f){
+ Vim_Buffer_Peek_Entry *entry = vim_buffer_peek_list + vim_buffer_peek_index;
+ Buffer_Identifier buffer_iden = entry->buffer_id;
+ Buffer_ID buffer = buffer_identifier_to_id(app, buffer_iden);
 
  f32 ratio_diff = entry->nxt_ratio - entry->cur_ratio;
  entry->cur_ratio += ratio_diff*frame_info.animation_dt*20.f;
@@ -1188,6 +1206,7 @@ internal int BitOffset(u32 value) {
  i64 line_count = buffer_get_line_count(app, buffer);
  //buffer_point.line_number = i64(entry->cur_ratio*(line_count+1) - rect_height(back_rect)/line_height);
  buffer_point.pixel_shift.y = line_height*entry->cur_ratio*(line_count+1) - rect_height(back_rect);
+ if(!vim_show_buffer_peek){ buffer_point.pixel_shift.y = 0.f; }
 
  FColor peek_back_color = fcolor_id(defcolor_back);
  nasr_draw_rect(app, back_rect, 0.f, fcolor_resolve(peek_back_color));

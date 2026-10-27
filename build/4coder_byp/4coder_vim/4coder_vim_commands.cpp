@@ -15,7 +15,7 @@ CUSTOM_DOC("Toggles buffer peek")
   height = VIM_LISTER_MAX_RATIO*screen_height;
   }
 
-  vim_nxt_filebar_offset = vim_show_buffer_peek*height;
+  vim_nxt_filebar_offset = (vim_show_buffer_peek ? height : vim_peek_collapsed_height(app));
   }
 
   CUSTOM_COMMAND_SIG(vim_inc_buffer_peek)

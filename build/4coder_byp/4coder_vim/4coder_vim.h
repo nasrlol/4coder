@@ -54,6 +54,18 @@ function Rect_f32 vim_get_bottom_rect(Application_Links *app){
  global b32 vim_show_buffer_peek;
  global i32 vim_buffer_peek_index;
 
+ // NOTE(nasr): height of the buffer peek title strip; the peek collapses to this when hidden
+ function f32 vim_peek_header_height(Application_Links *app){
+ return get_face_metrics(app, get_face_id(app, 0)).line_height + 6.f;
+ }
+
+ // NOTE(nasr): collapsed peek height; title strip plus a couple of lines of the buffer and the bottom border
+ #define VIM_PEEK_COLLAPSED_LINES 2.f
+ function f32 vim_peek_collapsed_height(Application_Links *app){
+ f32 line_height = get_face_metrics(app, get_face_id(app, 0)).line_height;
+ return vim_peek_header_height(app) + VIM_PEEK_COLLAPSED_LINES*line_height + 4.f;
+ }
+
 
  global Vim_Buffer_Peek_Entry vim_default_peek_list[] = {
  { buffer_identifier(string_u8_litexpr("*compilation*")), 1.f, 1.f },

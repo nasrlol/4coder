@@ -51,7 +51,7 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  push_fancy_string(scratch, &list, pop2_color, str.string);
  }
 
- Vec2_f32 p = bar.p0 + V2f32(2.f, 2.f);
+ Vec2_f32 p = bar.p0 + V2f32(8.f, 5.f);
  draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
  }
 
@@ -73,6 +73,18 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  Vec2_f32 starting_text_pos = text_position;
  Face_Metrics metrics = get_face_metrics(app, face);
 
+ // NOTE(BYP): Everything before the function name (the token right before the first '(')
+ // is the return type / qualifiers; draw it in a slightly shifted color.
+ i64 name_token_idx = -1;
+ for(i64 i = 0, last = -1; i < tokens.count; i += 1)
+ {
+ Token *t = tokens.tokens + i;
+ if(t->kind == TokenBaseKind_ParentheticalOpen){ name_token_idx = last; break; }
+ if(t->kind != TokenBaseKind_Whitespace){ last = i; }
+ }
+ ARGB_Color return_type_color = color_blend(finalize_color(defcolor_text_default, 0), 0.4f,
+ finalize_color(defcolor_type, 0));
+
  Token_Iterator_Array it = token_iterator_pos(0, &tokens, 0);
  b32 found_first_open_paren = 0;
  for(int arg_idx = 0;;)
@@ -87,6 +99,10 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  else
  {
  ARGB_Color color = finalize_color(defcolor_text_default, 0);
+ if(token - tokens.tokens < name_token_idx)
+ {
+ color = return_type_color;
+ }
  if(token->kind == TokenBaseKind_StatementClose)
  {
  String_Const_u8 str = string_substring(backing_string, Ii64(token));

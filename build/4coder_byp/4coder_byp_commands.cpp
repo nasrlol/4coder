@@ -101,8 +101,11 @@ CUSTOM_DOC("Clears jump buffer")
  CUSTOM_COMMAND_SIG(format_all_buffers)
  CUSTOM_DOC("Auto-indent and remove blank lines for all loaded buffers")
  {
+ // NOTE(nasr): with virtual whitespace the on-screen indent is computed, not stored, so
+ // reformatting would bake it into the file. Same guard as byp_file_save.
+ b32 is_virtual = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
  for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWrite);
- buffer != 0;
+ buffer != 0 && !is_virtual;
  buffer = get_buffer_next(app, buffer, Access_ReadWrite)){
  if (buffer_has_name_with_star(app, buffer)){ continue; }
  byp_reformat_buffer(app, buffer);

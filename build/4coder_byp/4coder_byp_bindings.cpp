@@ -5,7 +5,7 @@ byp_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id)
 
  SelectMap(global_id);
  BindCore(byp_startup, CoreCode_Startup);
- BindCore(vim_try_exit, CoreCode_TryExit);
+ BindCore(byp_try_exit, CoreCode_TryExit);
  BindCore(clipboard_record_clip, CoreCode_NewClipboardContents);
  BindMouseWheel(mouse_wheel_scroll);
  BindMouseWheel(mouse_wheel_change_face_size, KeyCode_Control);
@@ -52,6 +52,12 @@ byp_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id)
  VimBind(N|MAP, open_panel_hsplit,                            (Alt|KeyCode_H));
  VimBind(N|MAP, close_panel,                                  (Alt|KeyCode_Q));
  VimBind(N|MAP, swap_panels,                                  (Ctl|KeyCode_P));
+
+ //- tabs
+ VimBind(N|MAP, tab_next,                                     SUB_G, KeyCode_T);
+ VimBind(N|MAP, tab_prev,                                     SUB_G, (Sft|KeyCode_T));
+ VimBind(N|MAP, tab_new,                                      SUB_Leader, KeyCode_N);
+ VimBind(N|MAP, tab_close,                                    SUB_Leader, KeyCode_W);
 
  VimBind(N|V|MAP, byp_open_current_peek,                      (Alt|KeyCode_Return));
 

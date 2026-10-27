@@ -23,7 +23,8 @@ panel_space_from_screen_space(Vec2_f32 p, Vec2_f32 file_region_p0){
 
  function f32
  lister_get_text_field_height(f32 line_height){
- return(line_height);
+ // NOTE(nasr): 6px padding above and below the query text
+ return(line_height + 12.f);
  }
 
  function f32
@@ -220,7 +221,7 @@ panel_space_from_screen_space(Vec2_f32 p, Vec2_f32 file_region_p0){
  }
 
  {
- Vec2_f32 p = V2f32(text_field_rect.x0 + 3.f, text_field_rect.y0);
+ Vec2_f32 p = V2f32(text_field_rect.x0 + 8.f, text_field_rect.y0 + 6.f);
  Fancy_Line text_field = {};
  push_fancy_string(scratch, &text_field, fcolor_id(defcolor_pop1),
  lister->query.string);
@@ -247,6 +248,9 @@ panel_space_from_screen_space(Vec2_f32 p, Vec2_f32 file_region_p0){
  }
 
 
+ // NOTE(nasr): side margins around the list items
+ list_rect.x0 += 6.f;
+ list_rect.x1 -= 6.f;
  Range_f32 x = rect_range_x(list_rect);
  draw_set_clip(app, list_rect);
 
@@ -302,7 +306,8 @@ panel_space_from_screen_space(Vec2_f32 p, Vec2_f32 file_region_p0){
  Range_f32 y = If32(y_pos, y_pos + block_height);
  y_pos = y.max;
 
- Rect_f32 item_rect = Rf32(x, y);
+ // NOTE(nasr): 3px gap between items
+ Rect_f32 item_rect = Rf32(x, If32(y.min + 1.5f, y.max - 1.5f));
  Rect_f32 item_inner = rect_inner(item_rect, 3.f);
 
  b32 hovered = rect_contains_point(item_rect, m_p);
@@ -332,7 +337,7 @@ panel_space_from_screen_space(Vec2_f32 p, Vec2_f32 file_region_p0){
  push_fancy_stringf(scratch, &line, " ");
  push_fancy_string(scratch, &line, fcolor_id(defcolor_pop2), node->status);
 
- Vec2_f32 p = item_inner.p0 + V2f32(3.f, (block_height - line_height)*0.5f);
+ Vec2_f32 p = item_inner.p0 + V2f32(8.f, (rect_height(item_inner) - line_height)*0.5f);
  draw_fancy_line(app, face_id, fcolor_zero(), &line, p);
  }
 

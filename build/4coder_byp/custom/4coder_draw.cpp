@@ -223,22 +223,23 @@ draw_text_layout_default(Application_Links *app, Text_Layout_ID layout_id){
 
  function Rect_f32_Pair
  layout_file_bar_on_top(Rect_f32 rect, f32 line_height){
- return(rect_split_top_bottom(rect, line_height + 2.f));
+ // NOTE(nasr): 5px padding above and below the text
+ return(rect_split_top_bottom(rect, line_height + 10.f));
  }
 
  function Rect_f32_Pair
  layout_file_bar_on_bot(Rect_f32 rect, f32 line_height){
- return(rect_split_top_bottom_neg(rect, line_height + 2.f));
+ return(rect_split_top_bottom_neg(rect, line_height + 10.f));
  }
 
  function Rect_f32_Pair
  layout_query_bar_on_top(Rect_f32 rect, f32 line_height, i32 bar_count){
- return(rect_split_top_bottom(rect, (line_height + 2.f)*bar_count));
+ return(rect_split_top_bottom(rect, (line_height + 10.f)*bar_count));
  }
 
  function Rect_f32_Pair
  layout_query_bar_on_bot(Rect_f32 rect, f32 line_height, i32 bar_count){
- return(rect_split_top_bottom_neg(rect, (line_height + 2.f)*bar_count));
+ return(rect_split_top_bottom_neg(rect, (line_height + 10.f)*bar_count));
  }
 
  function Rect_f32_Pair
@@ -362,7 +363,7 @@ draw_text_layout_default(Application_Links *app, Text_Layout_ID layout_id){
  push_fancy_string(scratch, &list, pop2_color, str.string);
  }
 
- Vec2_f32 p = bar.p0 + V2f32(2.f, 2.f);
+ Vec2_f32 p = bar.p0 + V2f32(8.f, 5.f);
  draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
  }
 
@@ -372,7 +373,7 @@ draw_text_layout_default(Application_Links *app, Text_Layout_ID layout_id){
  Fancy_Line list = {};
  push_fancy_string(scratch, &list, fcolor_id(defcolor_pop1)        , query_bar->prompt);
  push_fancy_string(scratch, &list, fcolor_id(defcolor_text_default), query_bar->string);
- Vec2_f32 p = bar.p0 + V2f32(2.f, 2.f);
+ Vec2_f32 p = bar.p0 + V2f32(8.f, 5.f);
  draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
  }
 

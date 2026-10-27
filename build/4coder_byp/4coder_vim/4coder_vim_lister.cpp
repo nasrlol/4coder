@@ -558,7 +558,7 @@ ctrl_backspace_utf8(String_Const_u8 string){
  }
 
  vim_use_bottom_cursor = false;
- vim_nxt_filebar_offset = 0.f;
+ vim_nxt_filebar_offset = vim_peek_collapsed_height(app);
  if(do_invalidate){ vim_lister_view_id = 0; }
 
  if(!in.abort){

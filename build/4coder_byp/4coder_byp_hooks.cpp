@@ -44,6 +44,9 @@ CUSTOM_DOC("Responding to a startup event")
  if(def_get_config_b32(vars_save_string_lit("automatically_load_project"))){
  load_project(app);
  }
+
+ // NOTE(nasr): tab bar + session restore, after the project so session_file resolves against it
+ TAB_startup_inner(app, file_names.count > 0);
  }
 
  // NOTE(nasr): disable audio
@@ -62,6 +65,9 @@ CUSTOM_DOC("Responding to a startup event")
  desc.parameters.pt_size = 0;
  desc.parameters.bold = 0;
  byp_minimal_face = try_create_new_face(app, &desc);
+
+ // NOTE(nasr): buffer peek starts collapsed to its title strip
+ vim_nxt_filebar_offset = vim_cur_filebar_offset = vim_peek_collapsed_height(app);
 
  // NOTE(nasr): disabled fullscreen
  system_set_fullscreen(false);
@@ -95,6 +101,7 @@ CUSTOM_DOC("Responding to a startup event")
  vim_animate_cursor(app, frame_info);
  fold_tick(app, frame_info);
  byp_tick_colors(app, frame_info);
+ TAB_tick_inner(app, frame_info);
 
  vim_cursor_blink += frame_info.animation_dt;
 
@@ -136,7 +143,6 @@ CUSTOM_DOC("Responding to a startup event")
  b64 showing_file_bar = false;
  if(view_get_setting(app, view_id, ViewSetting_ShowFileBar, &showing_file_bar) && showing_file_bar){
  Rect_f32_Pair pair = layout_file_bar_on_top(region, line_height);
- pair.a = rect_split_top_bottom(pair.a, line_height).a;
  if(1){
  nasr_draw_file_bar(app, view_id, buffer, face_id, pair.a);
  }else{
