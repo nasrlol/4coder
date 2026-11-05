@@ -1,3 +1,54 @@
+// NOTE(nasr): which-function. Walk the scopes enclosing pos from the inside out; a scope is
+// a function body if the last function note before its '{' runs forward to exactly that
+// '{' (balanced parens, no ';' at depth 0 -- that would be a prototype, and any other
+// '{' first means it belongs to something else).
+function b32
+byp_note_body_is(Token_Array *tokens, i64 from, i64 open_pos){
+ i64 i = token_index_from_pos(tokens, from);
+ i32 depth = 0;
+ for (i32 n = 0; i < tokens->count && n < 512; i += 1, n += 1){
+  Token *t = tokens->tokens + i;
+  if (t->pos < from){ continue; }
+  if (t->pos >= open_pos){ return(t->pos == open_pos && depth == 0); }
+  if (t->kind == TokenBaseKind_ParentheticalOpen){ depth += 1; }
+  else if (t->kind == TokenBaseKind_ParentheticalClose){ depth -= 1; }
+  else if (t->kind == TokenBaseKind_ScopeOpen){ return(false); }
+  else if (depth == 0 && t->sub_kind == TokenCppKind_Semicolon){ return(false); }
+ }
+ return(false);
+}
+
+function String_Const_u8
+byp_which_function(Application_Links *app, Arena *arena, Buffer_ID buffer, i64 pos){
+ String_Const_u8 result = {};
+ Token_Array tokens = get_token_array_from_buffer(app, buffer);
+ if (tokens.tokens == 0){ return(result); }
+ code_index_lock();
+ Code_Index_File *file = code_index_get_file(buffer);
+ if (file != 0){
+  for (Code_Index_Nest *nest = code_index_get_nest(file, pos); nest != 0; nest = nest->parent){
+   if (nest->kind != CodeIndexNest_Scope){ continue; }
+   Code_Index_Note *best = 0;
+   for (i32 i = 0; i < file->note_array.count; i += 1){
+    Code_Index_Note *note = file->note_array.ptrs[i];
+    if (note->note_kind == CodeIndexNote_Function && note->pos.max <= nest->open.min &&
+        (best == 0 || note->pos.min > best->pos.min)){
+     best = note;
+    }
+   }
+   if (best != 0 && byp_note_body_is(&tokens, best->pos.max, nest->open.min)){
+    result = push_string_copy(arena, best->text);
+    break;
+   }
+  }
+ }
+ code_index_unlock();
+ return(result);
+}
+
+// NOTE(nasr): emacs-style mode line
+//   left:  <N> **  name  (Rust)  Def@q
+//   right: [function]  L12 C4  42%  lf
 function void
 nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Face_ID face_id, Rect_f32 bar){
  Scratch_Block scratch(app);
@@ -6,54 +57,118 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
 
  FColor base_color = fcolor_id(defcolor_base);
  FColor pop2_color = fcolor_id(defcolor_pop2);
+ FColor func_color = fcolor_id(defcolor_function);
+
+ Face_Metrics metrics = get_face_metrics(app, face_id);
+ f32 char_wid = metrics.normal_advance;
+ f32 text_y = bar.y0 + 5.f;
+ b32 is_active = (view_id == get_active_view(app, Access_Always));
 
  i64 cursor_position = view_get_cursor_pos(app, view_id);
  Buffer_Cursor cursor = view_compute_cursor(app, view_id, seek_pos(cursor_position));
 
- Fancy_Line list = {};
- String_Const_u8 unique_name = push_buffer_unique_name(app, scratch, buffer);
- push_fancy_string(scratch, &list, base_color, unique_name);
- push_fancy_stringf(scratch, &list, base_color, " - Row: %3.lld Col: %3.lld -", cursor.line, cursor.col);
+ f32 x = bar.x0 + 8.f;
 
- Managed_Scope scope = buffer_get_managed_scope(app, buffer);
- Line_Ending_Kind *eol_setting = scope_attachment(app, scope, buffer_eol_setting,
- Line_Ending_Kind);
- switch (*eol_setting){
- case LineEndingKind_Binary:
+ // NOTE(nasr): vim state tag, only on the active view (the vim state is global)
+ if (is_active){
+  String_Const_u8 tag = string_u8_litexpr("<N>");
+  Managed_ID tag_color = nasr_vim_cursor_normal;
+  switch (vim_state.mode){
+   case VIM_Insert:        { tag = string_u8_litexpr("<I>");  tag_color = nasr_vim_cursor_insert; }break;
+   case VIM_Replace:       { tag = string_u8_litexpr("<R>");  tag_color = nasr_vim_cursor_insert; }break;
+   case VIM_Visual_Insert: { tag = string_u8_litexpr("<VI>"); tag_color = nasr_vim_cursor_visual; }break;
+   case VIM_Visual:{
+    tag_color = nasr_vim_cursor_visual;
+    switch (vim_state.params.edit_type){
+     case EDIT_LineWise: { tag = string_u8_litexpr("<VL>"); }break;
+     case EDIT_Block:    { tag = string_u8_litexpr("<VB>"); }break;
+     default:            { tag = string_u8_litexpr("<V>");  }break;
+    }
+   }break;
+  }
+  f32 tag_wid = get_string_advance(app, face_id, tag) + char_wid;
+  Rect_f32 tag_rect = Rf32(bar.x0, bar.y0, bar.x0 + 8.f + tag_wid, bar.y1);
+  draw_rectangle_fcolor(app, tag_rect, 0.f, fcolor_id(tag_color));
+  draw_string(app, face_id, tag, V2f32(bar.x0 + 4.f + 0.5f*char_wid, text_y), fcolor_id(defcolor_bar));
+  x = tag_rect.x1 + char_wid;
+ }
+
+ // NOTE(nasr): left side
+ Fancy_Line left = {};
  {
- push_fancy_string(scratch, &list, base_color, string_u8_litexpr(" bin"));
- }break;
+  // emacs flags: "--" clean, "**" modified, "%%" read-only, "%*" read-only + modified
+  Dirty_State dirty = buffer_get_dirty_state(app, buffer);
+  b32 modified = HasFlag(dirty, DirtyState_UnsavedChanges);
+  i64 read_only = 0;
+  buffer_get_setting(app, buffer, BufferSetting_ReadOnly, &read_only);
+  String_Const_u8 flags = string_u8_litexpr("--");
+  if (read_only){
+   flags = (modified ? string_u8_litexpr("%*") : string_u8_litexpr("%%"));
+  }
+  else if (modified){
+   flags = string_u8_litexpr("**");
+  }
+  push_fancy_string(scratch, &left, (modified || read_only) ? pop2_color : base_color, flags);
+  if (HasFlag(dirty, DirtyState_UnloadedChanges)){
+   push_fancy_string(scratch, &left, pop2_color, string_u8_litexpr("!"));
+  }
+ }
+ push_fancy_string(scratch, &left, base_color, string_u8_litexpr("  "));
+ push_fancy_string(scratch, &left, base_color, push_buffer_unique_name(app, scratch, buffer));
+ push_fancy_stringf(scratch, &left, base_color, "  (%.*s)", string_expand(byp_language_name(byp_buffer_language(app, buffer))));
 
- case LineEndingKind_LF:
+ if (is_active){
+  if (vim_state.macro_char){
+   push_fancy_stringf(scratch, &left, pop2_color, "  Def@%c", vim_state.macro_char);
+  }
+  else if (global_keyboard_macro_is_recording){
+   push_fancy_string(scratch, &left, pop2_color, string_u8_litexpr("  Def"));
+  }
+ }
+
+ // NOTE(nasr): right side
+ String_Const_u8 function_name = byp_which_function(app, scratch, buffer, cursor_position);
+ if (function_name.size > 40){
+  function_name = push_stringf(scratch, "%.*s...", 37, function_name.str);
+ }
+
+ String_Const_u8 eol = {};
  {
- push_fancy_string(scratch, &list, base_color, string_u8_litexpr(" lf"));
- }break;
+  Managed_Scope scope = buffer_get_managed_scope(app, buffer);
+  Line_Ending_Kind *eol_setting = scope_attachment(app, scope, buffer_eol_setting, Line_Ending_Kind);
+  switch (*eol_setting){
+   case LineEndingKind_Binary: { eol = string_u8_litexpr("bin");  }break;
+   case LineEndingKind_LF:     { eol = string_u8_litexpr("lf");   }break;
+   case LineEndingKind_CRLF:   { eol = string_u8_litexpr("crlf"); }break;
+  }
+ }
 
- case LineEndingKind_CRLF:
+ String_Const_u8 percent = {};
  {
- push_fancy_string(scratch, &list, base_color, string_u8_litexpr(" crlf"));
- }break;
+  i64 buffer_size = buffer_get_size(app, buffer);
+  if (cursor_position == 0){ percent = string_u8_litexpr("Top"); }
+  else if (cursor_position >= buffer_size){ percent = string_u8_litexpr("Bot"); }
+  else{ percent = push_stringf(scratch, "%d%%", (i32)((100*cursor_position)/buffer_size)); }
  }
 
- u8 space[3];
- {
- Dirty_State dirty = buffer_get_dirty_state(app, buffer);
- String_u8 str = Su8(space, 0, 3);
- if (dirty != 0){
- string_append(&str, string_u8_litexpr(" "));
+ f32 left_wid = get_fancy_line_width(app, face_id, &left);
+ Fancy_Line right = {};
+ for (i32 pass = 0; pass < 2; pass += 1){
+  block_zero_struct(&right);
+  if (pass == 0 && function_name.size > 0){
+   push_fancy_stringf(scratch, &right, func_color, "[%.*s]  ", string_expand(function_name));
+  }
+  push_fancy_stringf(scratch, &right, base_color, "L%lld C%lld  %.*s  %.*s",
+                     cursor.line, cursor.col, string_expand(percent), string_expand(eol));
+  // NOTE(nasr): drop the function name first when the view is too narrow
+  f32 right_wid = get_fancy_line_width(app, face_id, &right);
+  if (x + left_wid + 2.f*char_wid + right_wid <= bar.x1 - 8.f){ break; }
  }
- if (HasFlag(dirty, DirtyState_UnsavedChanges)){
- string_append(&str, string_u8_litexpr("*"));
- }
- if (HasFlag(dirty, DirtyState_UnloadedChanges)){
- string_append(&str, string_u8_litexpr("!"));
- }
- push_fancy_string(scratch, &list, pop2_color, str.string);
- }
+ f32 right_wid = get_fancy_line_width(app, face_id, &right);
 
- Vec2_f32 p = bar.p0 + V2f32(8.f, 5.f);
- draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
- }
+ draw_fancy_line(app, face_id, fcolor_zero(), &left, V2f32(x, text_y));
+ draw_fancy_line(app, face_id, fcolor_zero(), &right, V2f32(Max(x + left_wid + 2.f*char_wid, bar.x1 - 8.f - right_wid), text_y));
+}
 
 
  function void
@@ -1016,9 +1131,12 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  byp_hex_color_preview(app, buffer, text_layout_id);
  }
 
+ // note(nasr): no selection highlight in visual mode, the cursor + mark colors show it
+ #if 0
  if(is_active_view && vim_state.mode == VIM_Visual){
  vim_draw_visual_mode(app, view_id, buffer, face_id, text_layout_id);
  }
+ #endif
 
  fold_draw(app, buffer, text_layout_id);
 

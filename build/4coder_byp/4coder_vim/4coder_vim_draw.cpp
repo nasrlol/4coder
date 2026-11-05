@@ -428,7 +428,10 @@ internal int BitOffset(u32 value) {
 
  if(vim_state.mode == VIM_Normal)      cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_normal, 0);
  else if(vim_state.mode == VIM_Insert) cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_insert, 0);
- else if(vim_state.mode == VIM_Visual) cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_visual, 0);
+ else if(vim_state.mode == VIM_Visual) {
+ cursor_color =  F4_ARGBFromID(active_color_table, nasr_vim_cursor_visual, 0);
+ mark_color   =  cursor_color;
+ }
  else                                  cursor_color =  F4_ARGBFromID(active_color_table, defcolor_cursor, 0);
 
 
@@ -762,7 +765,7 @@ internal int BitOffset(u32 value) {
  i64 test_line_min = get_line_number_from_pos(app, buffer, test_range.min);
  i64 test_line_max = get_line_number_from_pos(app, buffer, test_range.max);
 
- ARGB_Color helper_color = fcolor_resolve(fcolor_id(defcolor_mark));
+ ARGB_Color helper_color = fcolor_resolve(fcolor_id(nasr_vim_cursor_visual));
  for(i64 i=test_line_min; i<=test_line_max; i++){
  if(line_is_valid_and_blank(app, buffer, i) && i != line_min && i != line_max){ continue; }
  Vec2_f32 min_point = block_rect.p0 + V2f32(0, line_advance*(i-line_min));

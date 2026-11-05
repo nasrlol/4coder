@@ -463,3 +463,9 @@ CUSTOM_DOC("Clears jump buffer")
  if(byp_goto_definition(app, view)){ return; }
  byp_goto_matching_file(app, view, buffer);
 }
+
+
+VIM_COMMAND_SIG(vim_submode_ctlx){
+    vim_state.sub_mode = SUB_CtlX;
+    vim_state.chord_resolved = false;
+}

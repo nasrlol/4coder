@@ -26,6 +26,14 @@ CUSTOM_ID(colors, nasr_vim_cursor_insert);
 CUSTOM_ID(colors, nasr_vim_cursor_normal);
 CUSTOM_ID(colors, nasr_vim_cursor_visual);
 
+CUSTOM_ID(attachment, buffer_byp_language);
+
+
+#if 0
+String8 text = "Hello World";
+int     a    = 3;
+#endif
+
 
 
 #include "4coder_vimrc.h"
@@ -38,6 +46,7 @@ CUSTOM_ID(colors, nasr_vim_cursor_visual);
 #include "4coder_byp_helper.h"
 
 #include "4coder_byp_token.cpp"
+#include "4coder_byp_language.cpp"
 
 #include "4coder_byp_build.cpp"
 #include "4coder_byp_colors.cpp"

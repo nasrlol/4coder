@@ -37,7 +37,7 @@ struct Vim_Text_Object{
  SUB_G,
  SUB_Z,
  SUB_Leader,
- //SUB_Window,
+ SUB_CtlX,
  VIM_SUBMODE_COUNT,
  };
 

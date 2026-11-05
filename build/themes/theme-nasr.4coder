@@ -1,78 +1,109 @@
-defcolor_back                       =  0xFF111111;
-defcolor_back_cycle                 = {0x08C4A882, 0x0CC4A882};
+//- background
+defcolor_back                       =  0xFF161616;
 
-defcolor_margin                     =  0xFF1A1208;
-defcolor_margin_hover               =  0xFF3D2B1A;
-defcolor_margin_active              =  defcolor_margin_hover;
-defcolor_list_item                  = {defcolor_margin, defcolor_back};
-defcolor_list_item_hover            = {defcolor_margin_hover, defcolor_margin};
-defcolor_list_item_active           = {defcolor_margin_active, defcolor_margin_active};
+defcolor_back_cycle                 = {
+0x08C4A882,
+ 0x0CC4A882
+};
 
-defcolor_cursor                     = { 0xFFC4A8ff, 0xFFB86030 };
+//- lister
+
+defcolor_margin                     = 0xFF3A3632;
+defcolor_margin_hover               = 0xFF524B44;
+defcolor_margin_active              = 0xFFA8977C;
+
+defcolor_list_item                  = {
+0xFF2E2B28,
+ 0xFF34302C
+};
+
+defcolor_list_item_hover            = {
+0xFF4A443E,
+ 0xFF3A3632
+};
+
+defcolor_list_item_active           = {
+    0xFF5C4F3C,
+    0xFF524738
+};
+
+//- cursor
+defcolor_cursor                     = {
+0xFFff4030,
+0xFFff4030,
+};
 
 defcolor_at_cursor                  = 0xFF111111;
 
-nasr_vim_cursor_normal              = 0xF90ff000;
-nasr_vim_cursor_insert              = 0xF90ff000;
+nasr_mark_color                     = 0xFFff4030;
+defcolor_mark                       = 0xFFff4030;
+nasr_vim_cursor_normal              = 0xFFff4030;
 
-nasr_vim_cursor_visual              = 0xFFC48050;
+nasr_vim_cursor_insert              = nasr_vim_cursor_normal;
+nasr_vim_cursor_visual              = 0xFF009f43;
 
-nasr_mark_color                     = 0xFF8A0000;
-nasr_cursor_inactive                = 0x33999999;
+nasr_cursor_inactive                = 0x40F0A030;
 
-defcolor_highlight_cursor_line      = 0xFF1A1610;
+defcolor_highlight_cursor_line      = 0xFF1A2610;
 
-defcolor_mark                       = 0xFF8B7355;
 defcolor_highlight                  = 0xFF303040;
-defcolor_at_highlight               = 0xFFFF44DD;
+defcolor_at_highlight               = 0xFFFFffDD;
 
+//- text
+defcolor_text_default               = 0xFFC4A882;
+defcolor_text_cycle                 = {
+0xFFC4A882,
+ 0xFFC4A882,
+ 0xFFC4A882,
+ 0xFFC4A882
+};
 
-defcolor_text_default               =  0xFFC4A882;
-defcolor_text_cycle                 = {0xFFC4A882, 0xFFC4A882, 0xFFC4A882, 0xFFC4A882};
+// NOTE:
+// TODO:
+defcolor_comment                    = 0xFF666666;
+defcolor_comment_pop                = {
+0xFF24634F,
+ 0xFF7a2828
+};
 
-defcolor_comment                    =  0xFF666666;
-defcolor_comment_pop                = {0xFF2AB34F, 0xFFDB2828};
+defcolor_str_constant               = 0xFF6B8E23;
+defcolor_char_constant              = 0xFF6B8E23;
+defcolor_include                    = 0xFF6B8E23;
 
-defcolor_str_constant               =  0xFFFFA900;
-defcolor_char_constant              =  defcolor_str_constant;
+defcolor_int_constant               = 0xFFCFA882;
+defcolor_float_constant             = 0xFFCFA882;
+defcolor_bool_constant              = 0xFFCFA882;
 
-defcolor_include                    =  defcolor_str_constant;
-defcolor_int_constant               =  0xFFFFA900;
+defcolor_preproc                    = 0xFFCFA882;
+defcolor_special_character          = 0xFFFF0000;
+defcolor_ghost_character            = 0xFF3D2B1A;
 
-defcolor_float_constant             =  defcolor_int_constant;
-defcolor_bool_constant              =  defcolor_int_constant;
-defcolor_preproc                    =  0xFFDC7575;
-defcolor_special_character          =  0xFFFF0000;
-defcolor_ghost_character            =  0xFF3D2B1A;
+defcolor_paste                      = 0xFFCFA882;
+defcolor_undo                       = 0xFFCFA882;
 
-defcolor_paste                      =  0xFFDDEE00;
-defcolor_undo                       =  0xFF00DDEE;
+defcolor_highlight_junk             = 0xFF3A0A00;
+defcolor_highlight_white            = 0xFF003A3A;
 
-defcolor_highlight_junk             =  0xFF3A0A00;
-defcolor_highlight_white            =  0xFF003A3A;
+defcolor_line_numbers_back          = 0xFF111111;
+defcolor_line_numbers_text          = 0xFF6B5A45;
 
-defcolor_line_numbers_back          =  0xFF111111;
-defcolor_line_numbers_text          =  0xFF6B5A45;
-
-defcolor_type                       = 0xFFEDB211;
-defcolor_keyword                    = 0xFFF0C674;
-defcolor_struct                     = defcolor_keyword;
-defcolor_primitive                  = defcolor_keyword;
-defcolor_enum                       = 0xFF6EB535;
-defcolor_global                     = defcolor_text_default;
-defcolor_control                    = defcolor_keyword;
-defcolor_function                   = 0xFFDE451F;
-defcolor_macro                      = 0xFF2895C7;
+defcolor_type                       = 0xFFCFC0A0;
+defcolor_keyword                    = 0xFFCFC0A0 ;
+defcolor_struct                     = 0xFFCFC0A0;
+defcolor_primitive                  = 0xFFCFC0A0 ;
+defcolor_enum                       = 0xFFCFC0A0;
+defcolor_global                     = 0xFFCFC0A0;
+defcolor_control                    = 0xFFCFC0A0;
+defcolor_function                   = 0xFF99451F;
+defcolor_macro                      = 0xFF99451F;
 defcolor_non_text                   = 0xFF5C4D3C;
 
-defcolor_vim_filebar_pop            =  0xFFc4a882;
-defcolor_bar                        =  0xFFc4a882;
-defcolor_base                       =  0xFF111111;
-defcolor_pop1                       =  0xFFC48050;
-defcolor_pop2                       =  0xFF8C4A2A;
+defcolor_vim_filebar_pop            = 0xFFc4a882;
+defcolor_bar                        = 0xFF3a3632;
+defcolor_base                       = defcolor_text_default;
+defcolor_pop1                       = 0xFFC48050;
+defcolor_pop2                       = 0xFF8C4A2A;
 
-
-
-defcolor_vim_chord_text             =  defcolor_text_default;
-defcolor_vim_chord_unresolved       =  defcolor_mark;
-defcolor_vim_chord_error            =  0xFFC48050;
+defcolor_vim_chord_text             = 0xFFC48050;
+defcolor_vim_chord_unresolved       = 0xFFC48050;
+defcolor_vim_chord_error            = 0xFFC48050;

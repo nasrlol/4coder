@@ -52,6 +52,7 @@ nasr_cursor_inactive = managed_id_declare(app, string_u8_litexpr("colors"), stri
 nasr_vim_cursor_insert = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("nasr_vim_cursor_insert"));
 nasr_vim_cursor_normal = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("nasr_vim_cursor_normal"));
 nasr_vim_cursor_visual = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("nasr_vim_cursor_visual"));
+buffer_byp_language = managed_id_declare(app, string_u8_litexpr("attachment"), string_u8_litexpr("buffer_byp_language"));
 defcolor_vim_filebar_pop = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_vim_filebar_pop"));
 defcolor_vim_chord_text = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_vim_chord_text"));
 defcolor_vim_chord_unresolved = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_vim_chord_unresolved"));
