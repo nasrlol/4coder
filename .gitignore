@@ -12,3 +12,6 @@ build/test_build/
 # editor backups
 *.bak
 *~
+/build/4ed
+/build/4ed_app.so
+/build/build

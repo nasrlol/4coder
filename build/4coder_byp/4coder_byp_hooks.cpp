@@ -284,10 +284,10 @@ CUSTOM_DOC("Responding to a startup event")
  b32 is_virtual = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
  // NOTE(BYP): With virtual whitespace the on-screen indent is computed, not stored, so
  // baking it into the file (reformat) flattens every line. Only touch indentation without it.
- if (!is_virtual){
  if (auto_indent){
  auto_indent_buffer(app, buffer_id, buffer_range(app, buffer_id));
  }
+ if (!is_virtual){
  byp_reformat_buffer(app, buffer_id);
  }
  b32 clear_blanks = def_get_config_b32(vars_save_string_lit("clear_blank_lines"));

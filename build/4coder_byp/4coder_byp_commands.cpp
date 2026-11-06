@@ -98,21 +98,29 @@ CUSTOM_DOC("Clears jump buffer")
  trim_leading_whitespace(app, buffer);
  }
 
- CUSTOM_COMMAND_SIG(format_all_buffers)
- CUSTOM_DOC("Auto-indent and remove blank lines for all loaded buffers")
- {
- // NOTE(nasr): with virtual whitespace the on-screen indent is computed, not stored, so
- // reformatting would bake it into the file. Same guard as byp_file_save.
- b32 is_virtual = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
- for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWrite);
- buffer != 0 && !is_virtual;
- buffer = get_buffer_next(app, buffer, Access_ReadWrite)){
- if (buffer_has_name_with_star(app, buffer)){ continue; }
- byp_reformat_buffer(app, buffer);
- //clean_all_lines_buffer(app, buffer, CleanAllLinesMode_RemoveBlankLines);
- }
- save_all_dirty_buffers(app);
- }
+CUSTOM_COMMAND_SIG(format_all_buffers)
+CUSTOM_DOC("Auto-indent and clean all loaded buffers")
+{
+    // NOTE(nasr): auto_indent_buffer is token based, so it is safe with virtual whitespace.
+    // byp_reformat_buffer bakes the on-screen layout into the file, so only run it without.
+    b32 is_virtual = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
+    i32 skipped = 0;
+    for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWrite);
+         buffer != 0;
+         buffer = get_buffer_next(app, buffer, Access_ReadWrite)){
+        if (buffer_has_name_with_star(app, buffer)){ continue; }
+        // NOTE(nasr): lexing is async; a freshly opened buffer may have no tokens yet.
+        if (get_token_array_from_buffer(app, buffer).tokens == 0){ skipped += 1; continue; }
+        auto_indent_buffer(app, buffer, buffer_range(app, buffer));
+        if (!is_virtual){ byp_reformat_buffer(app, buffer); }
+        clean_all_lines_buffer(app, buffer, CleanAllLinesMode_LeaveBlankLines);
+    }
+    if (skipped > 0){
+        Scratch_Block scratch(app);
+        print_message(app, push_stringf(scratch, "format_all_buffers: skipped %d buffer(s) not lexed yet, run again\n", skipped));
+    }
+    save_all_dirty_buffers(app);
+}
 
 
  CUSTOM_COMMAND_SIG(byp_reset_face_size)
