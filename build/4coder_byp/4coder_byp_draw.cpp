@@ -47,7 +47,7 @@ byp_which_function(Application_Links *app, Arena *arena, Buffer_ID buffer, i64 p
 }
 
 // NOTE(nasr): emacs-style mode line
-//   left:  <N> **  name  (Rust)  Def@q
+//   left:  **  name  (Rust)  Def@q
 //   right: [function]  L12 C4  42%  lf
 function void
 nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Face_ID face_id, Rect_f32 bar){
@@ -68,30 +68,6 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  Buffer_Cursor cursor = view_compute_cursor(app, view_id, seek_pos(cursor_position));
 
  f32 x = bar.x0 + 8.f;
-
- // NOTE(nasr): vim state tag, only on the active view (the vim state is global)
- if (is_active){
-  String_Const_u8 tag = string_u8_litexpr("<N>");
-  Managed_ID tag_color = nasr_vim_cursor_normal;
-  switch (vim_state.mode){
-   case VIM_Insert:        { tag = string_u8_litexpr("<I>");  tag_color = nasr_vim_cursor_insert; }break;
-   case VIM_Replace:       { tag = string_u8_litexpr("<R>");  tag_color = nasr_vim_cursor_insert; }break;
-   case VIM_Visual_Insert: { tag = string_u8_litexpr("<VI>"); tag_color = nasr_vim_cursor_visual; }break;
-   case VIM_Visual:{
-    tag_color = nasr_vim_cursor_visual;
-    switch (vim_state.params.edit_type){
-     case EDIT_LineWise: { tag = string_u8_litexpr("<VL>"); }break;
-     case EDIT_Block:    { tag = string_u8_litexpr("<VB>"); }break;
-     default:            { tag = string_u8_litexpr("<V>");  }break;
-    }
-   }break;
-  }
-  f32 tag_wid = get_string_advance(app, face_id, tag) + char_wid;
-  Rect_f32 tag_rect = Rf32(bar.x0, bar.y0, bar.x0 + 8.f + tag_wid, bar.y1);
-  draw_rectangle_fcolor(app, tag_rect, 0.f, fcolor_id(tag_color));
-  draw_string(app, face_id, tag, V2f32(bar.x0 + 4.f + 0.5f*char_wid, text_y), fcolor_id(defcolor_bar));
-  x = tag_rect.x1 + char_wid;
- }
 
  // NOTE(nasr): left side
  Fancy_Line left = {};
