@@ -114,7 +114,8 @@ byp_build_view_spin(Application_Links *app){
   }
   }
 
-  function void
+  // returns false when the project has no command for this fkey
+  function b32
   byp_prj_exec_command_fkey_index(Application_Links *app, i32 fkey_index){
   // setup fkey string
   Scratch_Block scratch(app);
@@ -144,7 +145,9 @@ byp_build_view_spin(Application_Links *app){
   String_ID cmd_id = vars_save_string(vars_string_from_var(scratch, cmd_name_var));
   Variable_Handle cmd_list = def_get_config_var(vars_save_string_lit("commands"));
   Variable_Handle cmd = vars_read_key(cmd_list, cmd_id);
+  if(vars_is_nil(cmd)){ return false; }
   byp_prj_exec_command(app, scratch, cmd);
+  return true;
   }
 
 
@@ -192,4 +195,15 @@ byp_build_view_spin(Application_Links *app){
   vim_buffer_peek_index = 0;
   vim_buffer_peek_list[0] = {standard_build_build_buffer_identifier, 1.f, 1.f};
  }
+}
+
+// Alt+B / Alt+M: run the project's F1 command (project.4coder, e.g.
+// "build-notify ./build.sh" so waybar sees the result), and fall back to
+// searching for build.sh when there is no project file.
+CUSTOM_COMMAND_SIG(byp_build_project_or_search)
+CUSTOM_DOC("Runs the project's F1 command, or searches for a build script")
+{
+  if(!byp_prj_exec_command_fkey_index(app, 0)){
+    byp_build_project(app);
+  }
 }
