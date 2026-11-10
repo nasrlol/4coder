@@ -1181,7 +1181,6 @@ internal int BitOffset(u32 value) {
  if(rect_height(back_rect) > 0.f){
  Vim_Buffer_Peek_Entry *entry = vim_buffer_peek_list + vim_buffer_peek_index;
  Buffer_Identifier buffer_iden = entry->buffer_id;
- Buffer_ID buffer = buffer_identifier_to_id(app, buffer_iden);
 
  // NOTE(nasr): title strip at the top of the peek; stays visible when the peek is hidden
  Rect_f32_Pair header_pair = rect_split_top_bottom(back_rect, vim_peek_header_height(app));
