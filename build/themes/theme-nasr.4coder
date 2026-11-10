@@ -1,5 +1,5 @@
 //- background
-defcolor_back                       =  0xFF161616;
+defcolor_back                       =  0xFF000000;
 
 defcolor_back_cycle                 = {
 0x08C4A882,
@@ -29,15 +29,15 @@ defcolor_list_item_active           = {
 
 //- cursor
 defcolor_cursor                     = {
-0xFFff4030,
-0xFFff4030,
+0xFFff9f30,
+0xFFff9f30,
 };
 
 defcolor_at_cursor                  = 0xFF111111;
 
-nasr_mark_color                     = 0xFFff4030;
-defcolor_mark                       = 0xFFff4030;
-nasr_vim_cursor_normal              = 0xFFff4030;
+nasr_mark_color                     = 0xFFff9f30;
+defcolor_mark                       = 0xFFff9f30;
+nasr_vim_cursor_normal              = 0xFFff9f30;
 
 nasr_vim_cursor_insert              = nasr_vim_cursor_normal;
 nasr_vim_cursor_visual              = 0xFF009f43;
