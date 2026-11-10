@@ -20,7 +20,7 @@ enable_output_wrapping                    = true;
 enable_undo_fade_out                      = true;
 
 cursor_roundness                          = 0;
-mark_thickness                            = 3;
+mark_thickness                            = 4;
 lister_roundness                          = 20;
 
 f4_disable_cursor_trails                  = false;
@@ -47,9 +47,15 @@ treat_as_code                             = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.md.
 highlight_line_at_cursor                  = true;
 default_font_hinting                      = true;
 default_theme_name                        = "theme-nasr";
-default_font_name                         = "liberation-mono.ttf";
+// default_font_name                      = "jetbrains-mono.ttf";
+// default_font_name                         = "liberation-mono.ttf";
+// default_font_name                      = "MonaspaceKrypton-Regular.otf";
+// default_font_name                      = "IntelOneMono-Regular.ttf";
+default_font_name = "CascadiaMono-Regular.ttf";
+// default_font_name = "AtkinsonHyperlegibleMono-Regular.ttf";
 
-default_font_size                         = 14;
+
+default_font_size                         = 20;
 
 //- dont care
 
