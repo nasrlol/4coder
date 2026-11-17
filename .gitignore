@@ -7,7 +7,13 @@ distributions/
 *.dll
 *.pdb
 !build/4ed_app.so
-build/test_build/
+*.exe
+*.ilk
+*.i
+metadata_generator
+
+# runtime state
+.session.4coder
 
 # editor backups
 *.bak

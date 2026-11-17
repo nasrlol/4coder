@@ -1,0 +1,40 @@
+version(2);
+project_name = "4coder BYP";
+
+clear_blank_lines = true;
+indent_with_tabs = false;
+
+patterns = {
+ "*.c",
+ "*.cpp",
+ "*.hpp",
+ "*.h",
+ "*.m",
+ "*.mm",
+ "*.bat",
+ "*.sh",
+ "*.4coder",
+ "*.txt",
+ };
+
+ blacklist_patterns = { ".*", };
+
+ paths = { { .path = ".", .recursive = true, .relative = true, }, };
+ load_paths = {
+ .win = paths,
+ .linux = paths,
+ .mac = paths
+ };
+
+ commands = {
+ .build    = { .win = "..\\build.bat", .linux = "../build.sh", .mac = "../build.sh", .out = "*compilation*", .footer_panel = true, .save_dirty_files = true,  .cursor_at_end = true,  },
+ .run      = { .win = "..\\build\\4ed.exe", .linux = "../build/4ed", .mac = "../build/4ed", .out = "*run*", .footer_panel = true, .save_dirty_files = false, .cursor_at_end = true,  },
+ .debugger = { .win = "remedybg .",   .out = "*run*",         .footer_panel = true, .save_dirty_files = false, .cursor_at_end = false, },
+ };
+
+ fkey_command = {
+ .F1 = "build",
+ .F2 = "run",
+ .F5 = "build",
+ .F9 = "debugger",
+};
