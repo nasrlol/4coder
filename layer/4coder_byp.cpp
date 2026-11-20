@@ -54,7 +54,10 @@ int     a    = 3;
 #include "4coder_byp_commands.cpp"
 #include "4coder_byp_tabs.cpp"
 
+#if 0
 #include "4coder_nasr_struct_context.cpp"
+#endif
+#include "4coder_nasr_member_complete.cpp"
 #include "4coder_byp_draw.cpp"
 
 #include "4coder_byp_bindings.cpp"
@@ -69,6 +72,8 @@ void
 custom_layer_init(Application_Links *app){
  default_framework_init(app);
  set_all_default_hooks(app);
+ set_custom_hook(app, HookID_DeltaRule, nasr_cubic_scroll_delta);
+ set_custom_hook_memory_size(app, HookID_DeltaRule, delta_ctx_size(sizeof(Nasr_Scroll_State)));
 
  vim_buffer_peek_list[ArrayCount(vim_default_peek_list) + 0] = BYP_peek_list[0];
  vim_buffer_peek_list[ArrayCount(vim_default_peek_list) + 1] = BYP_peek_list[1];

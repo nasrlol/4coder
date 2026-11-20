@@ -55,12 +55,6 @@ function b32 vim_show_cursor(Application_Links *app){
  vim_state.insert_cursor = buffer_compute_cursor(app, buffer, seek_pos(view_get_cursor_pos(app, view)));
  }
 
- function void vim_clamp_newline(Application_Links *app, View_ID view, Buffer_ID buffer, i64 cursor_pos){
- u8 c = buffer_get_char(app, buffer, cursor_pos);
- i64 line = get_line_number_from_pos(app, buffer, cursor_pos);
- if(!line_is_valid_and_blank(app, buffer, line) && (c == '\r' || c == '\n')){ move_left(app); }
- }
-
  function u8 character_toggle_case(u8 c){
  i32 shift = ((2*character_is_upper(c)-1)*('a'-'A'));
  return (c + u8((character_is_alpha(c) && c != '_')*shift));
@@ -196,14 +190,12 @@ function b32 vim_show_cursor(Application_Links *app){
  end_pos = view_get_cursor_pos(app, view);
  i64 buffer_size = buffer_get_size(app, buffer);
 
- i64 range_begin=begin_pos, range_end=end_pos;
+ i64 range_end = end_pos;
  if(clamp_end > 0){ range_end = Min(range_end, clamp_end); }
- if(params->clusivity == VIM_Exclusive){
- if(begin_pos <= end_pos){ range_end--; }
- else{ range_begin++; }
- }
- Range_i64 range = Ii64(range_begin, range_end);
- range.max = Min(range.max+1, buffer_size);
+ // NOTE(nasr): exclusive = the text between two cursor gaps. inclusive also takes the char
+ // after the far end.
+ Range_i64 range = Ii64(begin_pos, range_end);
+ if(params->clusivity == VIM_Inclusive){ range.max = Min(range.max+1, buffer_size); }
 
  if(params->edit_type == EDIT_LineWise){
  range = range_union(get_line_range_from_pos(app, buffer, begin_pos),
@@ -239,9 +231,6 @@ function b32 vim_show_cursor(Application_Links *app){
  vim_default_register();
 
  vim_state.sub_mode = SUB_None;
- if(vim_state.mode != VIM_Insert && vim_state.mode != VIM_Visual){
- vim_clamp_newline(app, view, buffer, end_pos);
- }
  if(vim_state.mode == VIM_Visual){ vim_state.params.edit_type = prev_edit; }
  }
 
@@ -310,6 +299,7 @@ function b32 vim_show_cursor(Application_Links *app){
  vim_state.mode = VIM_Normal;
  {
  Vim_Motion_Block vim_motion_block(app, view_get_mark_pos(app, view));
+ if(vim_state.params.edit_type == EDIT_CharWise){ vim_state.params.clusivity = VIM_Exclusive; }
  }
  if(do_visual_insert){
  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);

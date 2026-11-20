@@ -1,4 +1,52 @@
 
+// NOTE(nasr): Casey's smooth scroll. every scroll lands in exactly `scroll_duration_ms`
+// (read at startup) along a cubic bezier that ends at rest. retargeting mid-scroll keeps the
+// current velocity, so repeated scrolls chain smoothly instead of restarting from zero.
+global f32 nasr_scroll_duration = 0.1f;
+
+struct Nasr_Scroll_State{
+ Vec2_f32 velocity;
+ f32 time_left;
+};
+
+// p and v are the camera's offset and velocity relative to the target (target at 0, at rest)
+function void
+nasr_cubic_scroll_step(f32 *p, f32 *v, f32 duration, f32 dt){
+ f32 t = dt/duration;
+ f32 u = 1.f - t;
+ f32 b0 = *p;
+ f32 b1 = *p + (duration/3.f)*(*v);
+ *p = u*u*u*b0 + 3.f*u*u*t*b1;
+ *v = (-3.f*u*u*b0 + (3.f*u*u - 6.f*u*t)*b1)/duration;
+}
+
+DELTA_RULE_SIG(nasr_cubic_scroll_delta){
+ Nasr_Scroll_State *state = (Nasr_Scroll_State*)data;
+ if(is_new_target){ state->time_left = nasr_scroll_duration; }
+ if(dt <= 0.f){ return V2f32(0.f, 0.f); }
+ if(state->time_left <= dt){
+  *state = {};
+  return pending;
+ }
+ Vec2_f32 offset = V2f32(-pending.x, -pending.y);
+ nasr_cubic_scroll_step(&offset.x, &state->velocity.x, state->time_left, dt);
+ nasr_cubic_scroll_step(&offset.y, &state->velocity.y, state->time_left, dt);
+ state->time_left -= dt;
+ return pending + offset;
+}
+
+// NOTE(nasr): Casey-style layout: the editor on the left, *compilation* in a panel on the
+// right. focus stays on the editor. a saved tab session restores its own layout over this.
+function void
+nasr_open_compilation_panel(Application_Links *app, View_ID editor_view){
+ Buffer_ID comp = buffer_identifier_to_id_create_out_buffer(app, buffer_identifier(string_u8_litexpr("*compilation*")));
+ View_ID comp_view = open_view(app, editor_view, ViewSplit_Right);
+ if(comp_view == 0){ return; }
+ new_view_settings(app, comp_view);
+ view_set_buffer(app, comp_view, comp, 0);
+ view_set_active(app, editor_view);
+}
+
 CUSTOM_COMMAND_SIG(byp_startup)
 CUSTOM_DOC("Responding to a startup event")
 {
@@ -13,6 +61,10 @@ CUSTOM_DOC("Responding to a startup event")
 
  Face_Description description = get_face_description(app, 0);
  load_config_and_apply(app, &global_config_arena, description.parameters.pt_size, description.parameters.hinting);
+ {
+ u64 scroll_ms = def_get_config_u64(app, vars_save_string_lit("scroll_duration_ms"));
+ nasr_scroll_duration = (scroll_ms ? scroll_ms : 100)*0.001f;
+ }
 
  // open command line files
  Buffer_ID buffer = 0;
@@ -40,6 +92,10 @@ CUSTOM_DOC("Responding to a startup event")
 
  // NOTE/TODO: (BYP) This is a hack until buffer_peek has it's own View_ID (allows comp jump list)
  byp_get_or_open_build_panel(app); // Disabled to use regular build panel
+
+ if(def_get_config_b32(vars_save_string_lit("startup_compilation_panel"))){
+ nasr_open_compilation_panel(app, view);
+ }
 
  if(def_get_config_b32(vars_save_string_lit("automatically_load_project"))){
  load_project(app);

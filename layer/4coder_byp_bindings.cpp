@@ -57,6 +57,7 @@ byp_vim_bindings(Application_Links *app){
 
     VimBind(N|MAP, format_all_buffers,                           SUB_Leader, KeyCode_K);
     VimBind(N|MAP, toggle_filebar,                               SUB_Leader, KeyCode_T);
+    VimBind(N|MAP, nasr_open_config,                             SUB_Leader, KeyCode_Comma);
 
     //- panels
     VimBind(N|MAP, open_panel_vsplit,                            (Alt|KeyCode_V));
@@ -207,5 +208,5 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
     SelectMap(code_id);
     ParentMap(file_id);
 
-    Bind(word_complete,                                 KeyCode_Tab);
+    Bind(nasr_complete,                                 KeyCode_Tab);
 }

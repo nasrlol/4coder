@@ -15,15 +15,19 @@ use_paren_helper                          = true;
 use_comment_keyword                       = true;
 
 lister_whole_word_backspace_when_modified = true;
-show_line_number_margins                  = false;
+show_line_number_margins                  = true;
 enable_output_wrapping                    = true;
 enable_undo_fade_out                      = true;
 
 cursor_roundness                          = 0;
 mark_thickness                            = 5;
+cursor_height                             = 90;
 lister_roundness                          = 0;
 
-f4_disable_cursor_trails                  = true;
+f4_disable_cursor_trails                  = false;
+disable_cursor_trail_stretch              = true;
+scroll_duration_ms                        = 100;
+startup_compilation_panel                 = true;
 use_stock_cursor                          = false;
 byp_disable_pos_context                   = false;
 
@@ -48,14 +52,14 @@ highlight_line_at_cursor                  = true;
 default_font_hinting                      = false;
 default_theme_name                        = "theme-default";
 // default_font_name                      = "jetbrains-mono.ttf";
-// default_font_name                         = "liberation-mono.ttf";
+default_font_name                         = "liberation-mono.ttf";
 // default_font_name                      = "MonaspaceKrypton-Regular.otf";
 // default_font_name                      = "IntelOneMono-Regular.ttf";
 // default_font_name                      = "CascadiaMono-Regular.ttf";
-default_font_name                      = "AtkinsonHyperlegibleMono-Regular.ttf";
+// default_font_name                      = "AtkinsonHyperlegibleMono-Regular.ttf";
 
 
-default_font_size                         = 20;
+default_font_size                         = 22;
 
 //- dont care
 

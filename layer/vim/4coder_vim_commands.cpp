@@ -117,7 +117,8 @@ CUSTOM_DOC("Toggles buffer peek")
   }
   VIM_COMMAND_SIG(vim_insert_mode){ vim_enter_insert_mode(app); }
   VIM_COMMAND_SIG(vim_insert_begin){ vim_begin_line(app); vim_enter_insert_mode(app); }
-  VIM_COMMAND_SIG(vim_insert_end){ vim_end_line(app); vim_insert_mode_after(app); }
+  // NOTE(nasr): `$` already lands on the gap after the line's last char, so no step right
+  VIM_COMMAND_SIG(vim_insert_end){ vim_end_line(app); vim_enter_insert_mode(app); }
 
   VIM_COMMAND_SIG(vim_modal_i){
   if(vim_state.mode == VIM_Visual || vim_state.params.request != REQUEST_None){
@@ -450,33 +451,30 @@ CUSTOM_DOC("Toggles buffer peek")
   view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
   }
 
-  VIM_COMMAND_SIG(vim_forward_end){
+  // NOTE(nasr): the cursor is drawn as the gap before its char, so the word-end motions land
+  // on the gap after a word's last char. scanning starts from the char before the cursor, so a
+  // cursor already at a word's end moves on. exclusive: de/dge cover the text between the gaps.
+  function void vim_word_end_motion(Application_Links *app, Scan_Direction direction, b32 big_word){
   Vim_Motion_Block vim_motion_block(app);
+  vim_state.params.clusivity = VIM_Exclusive;
   View_ID view = get_active_view(app, Access_ReadVisible);
-  i64 pos = vim_scan_end(app, view, Scan_Forward, vim_consume_number());
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+  i64 pos = view_get_cursor_pos(app, view);
+  if(pos == 0 && direction == Scan_Backward){ return; }
+  pos = Max(0, pos - 1);
+  const i32 N = vim_consume_number();
+  foreach(i, N){
+  pos = (big_word ? vim_END_boundary(app, buffer, direction, pos)
+                  : vim_end_boundary(app, buffer, direction, pos));
+  }
+  pos = clamp(0, pos + 1, buffer_get_size(app, buffer));
   view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
   }
 
-  VIM_COMMAND_SIG(vim_backward_end){
-  Vim_Motion_Block vim_motion_block(app);
-  View_ID view = get_active_view(app, Access_ReadVisible);
-  i64 pos = vim_scan_end(app, view, Scan_Backward, vim_consume_number());
-  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
-  }
-
-  VIM_COMMAND_SIG(vim_forward_END){
-  Vim_Motion_Block vim_motion_block(app);
-  View_ID view = get_active_view(app, Access_ReadVisible);
-  i64 pos = vim_scan_END(app, view, Scan_Forward, vim_consume_number());
-  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
-  }
-
-  VIM_COMMAND_SIG(vim_backward_END){
-  Vim_Motion_Block vim_motion_block(app);
-  View_ID view = get_active_view(app, Access_ReadVisible);
-  i64 pos = vim_scan_END(app, view, Scan_Backward, vim_consume_number());
-  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
-  }
+  VIM_COMMAND_SIG(vim_forward_end){  vim_word_end_motion(app, Scan_Forward,  false); }
+  VIM_COMMAND_SIG(vim_backward_end){ vim_word_end_motion(app, Scan_Backward, false); }
+  VIM_COMMAND_SIG(vim_forward_END){  vim_word_end_motion(app, Scan_Forward,  true); }
+  VIM_COMMAND_SIG(vim_backward_END){ vim_word_end_motion(app, Scan_Backward, true); }
 
   VIM_COMMAND_SIG(vim_bounce){
   vim_push_jump(app, get_active_view(app, Access_ReadVisible));

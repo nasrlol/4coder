@@ -19,12 +19,6 @@ VIM_COMMAND_SIG(vim_begin_line){
   new_pos -= (buffer_get_char(app, buffer, new_pos) == '\n');
   new_pos -= (buffer_get_char(app, buffer, new_pos) == '\r');
   }
-  // NOTE(nasr): plain `$` in normal mode lands on the last char like vim, not on the newline.
-  // operators (d$, y$, ...) keep Side_Max so the range still reaches the end of the line.
-  else if(vim_state.params.request == REQUEST_None && vim_state.mode == VIM_Normal){
-  i64 line_start = get_line_side_pos_from_pos(app, buffer, pos, Side_Min);
-  if(new_pos > line_start){ new_pos -= 1; }
-  }
   view_set_cursor_and_preferred_x(app, view, seek_pos(new_pos));
   }
 
@@ -277,24 +271,6 @@ VIM_COMMAND_SIG(vim_begin_line){
   foreach(i,N){
   if(prev_pos){ *prev_pos = cursor_pos; }
   cursor_pos = vim_WORD_boundary(app, buffer, direction, cursor_pos);
-  }
-  return cursor_pos;
-  }
-
-  function i64 vim_scan_end(Application_Links *app, View_ID view, Scan_Direction direction, const i32 N=1){
-  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
-  i64 cursor_pos = view_get_cursor_pos(app, view);
-  foreach(i,N){
-  cursor_pos = vim_end_boundary(app, buffer, direction, cursor_pos);
-  }
-  return cursor_pos;
-  }
-
-  function i64 vim_scan_END(Application_Links *app, View_ID view, Scan_Direction direction, const i32 N=1){
-  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
-  i64 cursor_pos = view_get_cursor_pos(app, view);
-  foreach(i,N){
-  cursor_pos = vim_END_boundary(app, buffer, direction, cursor_pos);
   }
   return cursor_pos;
   }
@@ -583,7 +559,7 @@ VIM_COMMAND_SIG(vim_begin_line){
   Vim_Motion_Block vim_motion_block(app, range.max);
   vim_state.params.clusivity = VIM_Inclusive;
   view_set_cursor_and_preferred_x(app, view, seek_pos(range.min));
-  view_set_mark(app, view, seek_pos(range.max));
+  view_set_mark(app, view, seek_pos(range.max + (vim_state.mode == VIM_Visual)));
   }
   vim_state.prev_params.clusivity = object_clusivity;
   if(nasr_keep_mark){ view_set_mark(app, view, seek_pos(nasr_prev_mark)); }

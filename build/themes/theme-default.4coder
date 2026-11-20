@@ -10,34 +10,37 @@ defcolor_margin                     = 0xFF000000;
 defcolor_margin_hover               = 0xFF000000;
 defcolor_margin_active              = 0xFFC4A882;
 
-defcolor_list_item                  = {
+defcolor_list_item                  =
+{
     0xFF000000,
     0xFF000000
 };
 
-defcolor_list_item_hover            = {
+defcolor_list_item_hover            =
+{
     0xFF000000,
     0xFF000000
 };
 
-defcolor_list_item_active           = {
-    0xFFC4A882,
+defcolor_list_item_active           =
+{
+    0x22C4A882,
     0xFF000000
 };
 
 //- cursor
-defcolor_cursor                     = {
+defcolor_cursor                     =
+{
     0xFFFFFFFF,
     0xFFFFFFFF,
 };
 
 defcolor_at_cursor                  = 0xFF000000;
 defcolor_mark                       = 0xFF000000;
-nasr_mark_color                     = 0xFFAA000F;
-nasr_vim_cursor_normal              = 0xFFAA000F;
-
-nasr_vim_cursor_insert              = 0xFFfA0f0F;
-nasr_vim_cursor_visual              = 0xFF88ff88;
+nasr_mark_color                     = 0xFFff333f;
+nasr_vim_cursor_normal              = 0xFF88ff88;
+nasr_vim_cursor_insert              = 0xFF33ff33;
+nasr_vim_cursor_visual              = 0xFFD9661F;
 
 nasr_cursor_inactive                = 0x40FFFFFF;
 
@@ -59,8 +62,7 @@ defcolor_text_cycle                 = {
 // TODO:
 defcolor_comment                    = 0xFFC4A882;
 defcolor_comment_pop                = {
-    0xFFC4A882,
-    0xFFC4A882
+	0xFFC4ff82 ,0xFFffA882,
 };
 
 defcolor_str_constant               = 0xFFC4A882;

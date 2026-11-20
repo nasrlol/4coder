@@ -285,7 +285,7 @@ internal int BitOffset(u32 value) {
  function void
  C4_RenderCursorSymbolThingy(Application_Links *app, Rect_f32 rect,
  f32 roundness, f32 thickness,
- ARGB_Color color, Cursor_Type type, b32 close_at_gap = false)
+ ARGB_Color color, Cursor_Type type)
  {
  f32 line_height = rect.y1 - rect.y0;
  f32 bracket_width = 0.5f*line_height;
@@ -320,10 +320,9 @@ internal int BitOffset(u32 value) {
  {
  Rect_f32 end_top, end_side, end_bottom;
 
- // NOTE(nasr): normal/visual: the cursor is ON a char, so the close bracket goes on the
- // char's right edge and wraps it. insert (close_at_gap): the cursor is the insertion
- // gap before the char, so the bracket goes on the left edge.
- Vec2_f32 end_p = {close_at_gap ? rect.x0 : rect.x1, rect.y0};
+ // NOTE(nasr): the close bracket sits on the char's left edge (the gap before the char), in
+ // every mode, so switching between normal and insert never moves it.
+ Vec2_f32 end_p = {rect.x0, rect.y0};
 
  end_top.x0 = end_p.x - bracket_width;
  end_top.x1 = end_p.x - thickness;
@@ -355,55 +354,45 @@ internal int BitOffset(u32 value) {
  }
  }
 
- function void
+ // NOTE(nasr): cursor trail. *rect is the smoothed state: all four edges ease toward target with
+ // a frame-rate independent exponential step (never overshoots) and snap once they're within
+ // half a pixel. the stretch along the direction of travel is applied to the returned rect
+ // only, so it never feeds back into the state. *last_rect is the previous frame's drawn rect.
+ function Rect_f32
  DoTheCursorInterpolation(Application_Links *app, Frame_Info frame_info,
  Rect_f32 *rect, Rect_f32 *last_rect, Rect_f32 target)
  {
- *last_rect = *rect;
-
- float x_change = target.x0 - rect->x0;
- float y_change = target.y0 - rect->y0;
-
- float cursor_size_x = (target.x1 - target.x0);
- float cursor_size_y = (target.y1 - target.y0) * (1 + fabsf(y_change) / 30.f);
-
- b32 should_animate_cursor = !global_battery_saver && !def_get_config_b32(vars_save_string_lit("f4_disable_cursor_trails"));
- if(should_animate_cursor)
- {
- if(fabs(x_change) > 1.f || fabs(y_change) > 1.f)
- {
- animate_in_n_milliseconds(app, 0);
- }
- }
- else
+ b32 should_animate = !global_battery_saver && !def_get_config_b32(vars_save_string_lit("f4_disable_cursor_trails"));
+ if(!should_animate)
  {
  *rect = *last_rect = target;
- cursor_size_y = target.y1 - target.y0;
+ return target;
  }
 
- if(should_animate_cursor)
- {
- rect->x0 += (x_change) * frame_info.animation_dt * 30.f;
- rect->y0 += (y_change) * frame_info.animation_dt * 30.f;
- rect->x1 = rect->x0 + cursor_size_x;
- rect->y1 = rect->y0 + cursor_size_y;
- }
+ const f32 trail_rate = 40.f; // higher = catches up faster
+ f32 t = 1.f - expf(-trail_rate*frame_info.animation_dt);
+ f32 y_change = target.y0 - rect->y0;
 
- if(target.y0 > last_rect->y0)
- {
- if(rect->y0 < last_rect->y0)
- {
- rect->y0 = last_rect->y0;
- }
- }
- else
- {
- if(rect->y1 > last_rect->y1)
- {
- rect->y1 = last_rect->y1;
- }
- }
+ rect->x0 += (target.x0 - rect->x0)*t;
+ rect->y0 += (target.y0 - rect->y0)*t;
+ rect->x1 += (target.x1 - rect->x1)*t;
+ rect->y1 += (target.y1 - rect->y1)*t;
 
+ f32 gap = Max(Max(fabsf(target.x0 - rect->x0), fabsf(target.x1 - rect->x1)),
+               Max(fabsf(target.y0 - rect->y0), fabsf(target.y1 - rect->y1)));
+ if(gap < 0.5f){ *rect = target; }
+ else{ animate_in_n_milliseconds(app, 0); }
+
+ Rect_f32 drawn = *rect;
+ if(!def_get_config_b32(vars_save_string_lit("disable_cursor_trail_stretch")))
+ {
+ drawn.y1 = drawn.y0 + rect_height(*rect)*(1.f + fabsf(y_change)/30.f);
+ }
+ if(y_change > 0.f){      drawn.y0 = Max(drawn.y0, last_rect->y0); }
+ else if(y_change < 0.f){ drawn.y1 = Min(drawn.y1, last_rect->y1); }
+
+ *last_rect = drawn;
+ return drawn;
  }
 
  function void
@@ -442,8 +431,6 @@ internal int BitOffset(u32 value) {
  cursor_color = inactive_cursor_color;
  mark_color   = inactive_cursor_color;
  }
-
- b32 at_gap = (vim_state.mode == VIM_Insert);
 
  // NOTE: oplossing
  {
@@ -484,20 +471,28 @@ internal int BitOffset(u32 value) {
  Rect_f32 target_cursor = text_layout_character_on_screen(app, text_layout_id, cursor_pos);
  Rect_f32 target_mark = text_layout_character_on_screen(app, text_layout_id, mark_pos);
 
- // NOTE(nasr): trim cursor/mark to the glyph area (ascent..descent) instead of the full
- // line height. glyphs sit with their baseline at line top + ascent, so the line gap is
- // all below the text. draw-only: positions and layout are untouched.
+ // NOTE(nasr): size cursor/mark to `cursor_height` percent of the glyph area (ascent..descent)
+ // instead of the full line height, centered on it. unset/0 means 100. glyphs sit with their
+ // baseline at line top + ascent, so the line gap is all below the text. draw-only.
  {
+ u64 cursor_height_100 = def_get_config_u64(app, vars_save_string_lit("cursor_height"));
+ if(cursor_height_100 == 0){ cursor_height_100 = 100; }
+ f32 cursor_height_scale = Min(cursor_height_100, 100)*0.01f;
  Face_Metrics face_metrics = get_face_metrics(app, get_face_id(app, buffer));
  f32 text_h = face_metrics.ascent - face_metrics.descent;
  if(text_h > 0.f)
  {
- target_cursor.y1 = Min(target_cursor.y1, target_cursor.y0 + text_h);
- target_mark.y1   = Min(target_mark.y1,   target_mark.y0   + text_h);
+ f32 h   = cursor_height_scale*text_h;
+ f32 pad = 0.5f*(text_h - h);
+ target_cursor.y0 += pad; target_cursor.y1 = Min(target_cursor.y1, target_cursor.y0 + h);
+ target_mark.y0   += pad; target_mark.y1   = Min(target_mark.y1,   target_mark.y0   + h);
  }
  }
 
  // NOTE(rjf): Draw cursor.
+ // trails only animate in the active view; inactive views draw the cursor in place
+ Rect_f32 cursor_trail = target_cursor;
+ Rect_f32 mark_trail   = target_mark;
  {
  if(is_active_view)
  {
@@ -509,7 +504,7 @@ internal int BitOffset(u32 value) {
  target_cursor.x1 = target_cursor.x0 + width;
  }
 
- DoTheCursorInterpolation(app, frame_info, &global_cursor_rect,
+ cursor_trail = DoTheCursorInterpolation(app, frame_info, &global_cursor_rect,
  &global_last_cursor_rect, target_cursor);
 
 
@@ -527,14 +522,14 @@ internal int BitOffset(u32 value) {
  target_mark.x1 = target_mark.x0 + width;
  }
 
- DoTheCursorInterpolation(app, frame_info, &global_mark_rect, &global_last_mark_rect,
+ mark_trail = DoTheCursorInterpolation(app, frame_info, &global_mark_rect, &global_last_mark_rect,
  target_mark);
  }
 
  // NOTE(rjf): Draw main cursor.
  {
- C4_RenderCursorSymbolThingy(app, global_cursor_rect, roundness, outline_thickness, cursor_color, cursor_type, at_gap);
- C4_RenderCursorSymbolThingy(app, target_cursor, roundness, outline_thickness, cursor_color, cursor_type, at_gap);
+ C4_RenderCursorSymbolThingy(app, cursor_trail, roundness, outline_thickness, cursor_color, cursor_type);
+ C4_RenderCursorSymbolThingy(app, target_cursor, roundness, outline_thickness, cursor_color, cursor_type);
  }
 
  // NOTE(rjf): GLOW IT UP
@@ -549,7 +544,7 @@ internal int BitOffset(u32 value) {
  glow_rect.x1 += glow;
  glow_rect.y1 += glow;
  C4_RenderCursorSymbolThingy(app, glow_rect, roundness + glow*0.7f, 2.f,
- fcolor_resolve(fcolor_change_alpha(fcolor_argb(cursor_color), alpha)), cursor_type, at_gap);
+ fcolor_resolve(fcolor_change_alpha(fcolor_argb(cursor_color), alpha)), cursor_type);
  }
  else
  {
@@ -562,10 +557,10 @@ internal int BitOffset(u32 value) {
  // note(nasr): changed the parameter from .5 to .75
  // paint_text_color_pos(app, text_layout_id, cursor_pos,
  // fcolor_id(defcolor_at_cursor));
- C4_RenderCursorSymbolThingy(app, global_mark_rect, roundness, outline_thickness,
- fcolor_resolve(fcolor_change_alpha(fcolor_argb(mark_color), 0.75f)), mark_type, at_gap);
+ C4_RenderCursorSymbolThingy(app, mark_trail, roundness, outline_thickness,
+ fcolor_resolve(fcolor_change_alpha(fcolor_argb(mark_color), 0.75f)), mark_type);
  C4_RenderCursorSymbolThingy(app, target_mark, roundness, outline_thickness,
- fcolor_resolve(fcolor_change_alpha(fcolor_argb(mark_color), 0.75f)), mark_type, at_gap);
+ fcolor_resolve(fcolor_change_alpha(fcolor_argb(mark_color), 0.75f)), mark_type);
  }
  }
 
@@ -634,7 +629,7 @@ internal int BitOffset(u32 value) {
  {
  DoTheCursorInterpolation(app, frame_info, &global_cursor_rect, &global_last_cursor_rect, rect);
  }
- draw_rectangle(app, global_cursor_rect, roundness, ghost_color);
+ draw_rectangle(app, global_last_cursor_rect, roundness, ghost_color); // last drawn trail
  draw_rectangle(app, rect, roundness, cursor_color);
  }
  }

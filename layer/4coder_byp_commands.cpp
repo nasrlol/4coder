@@ -48,6 +48,21 @@ CUSTOM_DOC("Clears jump buffer")
  load_config_and_apply(app, &global_config_arena, 0, false);
  }
 
+ // NOTE(nasr): opens the config.4coder 4coder actually loads (found through the same search
+ // path as load_config_and_apply). saving it reloads it, see the save hook.
+ CUSTOM_COMMAND_SIG(nasr_open_config)
+ CUSTOM_DOC("Opens config.4coder in the active panel")
+ {
+ Scratch_Block scratch(app);
+ String_Const_u8 path = def_search_normal_full_path(scratch, str8_lit("config.4coder"));
+ if(path.size == 0){
+ print_message(app, string_u8_litexpr("nasr_open_config: config.4coder not found\n"));
+ return;
+ }
+ View_ID view = get_active_view(app, Access_Always);
+ view_open_file(app, view, path, true);
+ }
+
  CUSTOM_COMMAND_SIG(zbyp_reload_project)
  CUSTOM_DOC("Reloads the project.4coder file")
  {

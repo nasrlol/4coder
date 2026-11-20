@@ -522,7 +522,9 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  global_cursor_rect.y1,
  };
 
+#if 0
  nasr_draw_struct_context(app, buffer, &tokens, pos, face, padding, view_rect, &tooltip_position);
+#endif
 
  // NOTE(BYP): Inside `return ...;`, show the enclosing function's signature (for its return type).
  Range_i64 enclosing_name = {};
@@ -1015,18 +1017,100 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  target_mark.x1 = target_mark.x0 + width;
  }
 
- DoTheCursorInterpolation(app, frame_info, &global_cursor_rect, &global_last_cursor_rect, target_cursor);
- DoTheCursorInterpolation(app, frame_info, &global_mark_rect, &global_last_mark_rect, target_mark);
+ Rect_f32 cursor_trail = DoTheCursorInterpolation(app, frame_info, &global_cursor_rect, &global_last_cursor_rect, target_cursor);
+ Rect_f32 mark_trail   = DoTheCursorInterpolation(app, frame_info, &global_mark_rect,   &global_last_mark_rect,   target_mark);
 
  // trail + block at the real position
- draw_rectangle_fcolor(app, global_cursor_rect, roundness, cursor_color);
+ draw_rectangle_fcolor(app, cursor_trail, roundness, cursor_color);
  draw_character_block(app, text_layout_id, cursor_pos, roundness, cursor_color);
  paint_text_color_pos(app, text_layout_id, cursor_pos, fcolor_id(defcolor_at_cursor));
 
- draw_rectangle_outline_fcolor(app, global_mark_rect, roundness, outline_thickness, mark_color);
+ draw_rectangle_outline_fcolor(app, mark_trail, roundness, outline_thickness, mark_color);
  draw_character_wire_frame(app, text_layout_id, mark_pos, roundness, outline_thickness, mark_color);
 
  draw_set_clip(app, clip);
+ }
+
+ // NOTE(nasr): insert-mode ghost text: the rest of the word that Tab (nasr_complete) would
+ // insert first: a struct member after `.`/`->` (4coder_nasr_member_complete.cpp), else a word, drawn faded after the cursor. it runs its own completion iterator so it never
+ // disturbs Tab's state, and only rescans when the buffer, cursor or text changes.
+ struct Nasr_Complete_Preview{
+ Buffer_ID buffer;
+ i64 pos;
+ i64 size;
+ History_Record_Index history;
+ u8 suffix_space[128];
+ String_Const_u8 suffix;
+ };
+
+ function String_Const_u8
+ nasr_complete_preview_suffix(Application_Links *app, Buffer_ID buffer, i64 pos){
+ local_persist Nasr_Complete_Preview cache = {};
+ local_persist Arena arena = {};
+ local_persist Word_Complete_Iterator it = {};
+
+ i64 size = buffer_get_size(app, buffer);
+ History_Record_Index history = buffer_history_get_current_state_index(app, buffer);
+ if(cache.buffer == buffer && cache.pos == pos && cache.size == size && cache.history == history){
+ return cache.suffix;
+ }
+ cache.buffer = buffer;
+ cache.pos = pos;
+ cache.size = size;
+ cache.history = history;
+ cache.suffix = {};
+
+ // only at the end of a word that's followed by whitespace or the line end, so the ghost
+ // text never draws over real characters
+ u8 next = buffer_get_char(app, buffer, pos);
+ if(pos < size && !character_is_whitespace(next)){ return cache.suffix; }
+ if(arena.base_allocator == 0){ arena = make_arena_system(); }
+
+ // struct members first: after `.` / `->` they're the only sensible completion
+ String_Const_u8 word = {};
+ u64 needle_size = 0;
+ Scratch_Block scratch(app, &arena);
+ Member_Complete members = member_complete_query(app, scratch, buffer, pos);
+ if(members.resolved){
+ if(members.match_count == 0){ return cache.suffix; }
+ word = members.matches[0];
+ needle_size = (u64)range_size(members.needle);
+ }
+ else{
+ Range_i64 needle = get_word_complete_needle_range(app, buffer, pos);
+ if(range_size(needle) < 2){ return cache.suffix; }
+ if(it.already_used_table.allocator != 0){
+ end_temp(it.arena_restore);
+ table_free(&it.already_used_table);
+ }
+ block_zero_struct(&it);
+ it.app = app;
+ it.arena = &arena;
+ word_complete_iter_init(buffer, needle, &it);
+ word_complete_iter_next(&it);
+ if(word_complete_iter_is_at_base_slot(&it)){ return cache.suffix; }
+ word = word_complete_iter_read(&it);
+ needle_size = (u64)range_size(needle);
+ }
+ if(word.size <= needle_size){ return cache.suffix; }
+ u64 count = Min(word.size - needle_size, sizeof(cache.suffix_space));
+ block_copy(cache.suffix_space, word.str + needle_size, count);
+ cache.suffix = SCu8(cache.suffix_space, count);
+ return cache.suffix;
+ }
+
+ function void
+ nasr_draw_complete_preview(Application_Links *app, View_ID view, Buffer_ID buffer, Face_ID face_id, Text_Layout_ID text_layout_id, i64 cursor_pos){
+ if(vim_state.mode != VIM_Insert){ return; }
+ // while cycling with Tab the word is already being completed, so stay out of the way
+ Managed_Scope scope = view_get_managed_scope(app, view);
+ Rewrite_Type *rewrite = scope_attachment(app, scope, view_rewrite_loc, Rewrite_Type);
+ if(rewrite != 0 && *rewrite == Rewrite_WordComplete){ return; }
+
+ String_Const_u8 suffix = nasr_complete_preview_suffix(app, buffer, cursor_pos);
+ if(suffix.size == 0){ return; }
+ Rect_f32 rect = text_layout_character_on_screen(app, text_layout_id, cursor_pos);
+ draw_string(app, face_id, suffix, rect.p0, fcolor_id(defcolor_ghost_character));
  }
 
  function void
@@ -1149,6 +1233,7 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
 
  vim_draw_after_text(app, view_id, is_active_view, buffer, text_layout_id, cursor_roundness, mark_thickness, frame_info);
  if(is_active_view){
+ nasr_draw_complete_preview(app, view_id, buffer, face_id, text_layout_id, cursor_pos);
  byp_draw_function_preview(app, buffer, If32(rect.x0, rect.x1), cursor_pos);
  nasr_draw_pos_context(app, view_id, buffer, text_layout_id, cursor_pos);
  }
