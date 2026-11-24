@@ -1,4 +1,3 @@
-user_name                                 = "nasr";
 mapping                                   = "";
 mode                                      = "";
 bind_by_physical_key                      = true;
@@ -20,7 +19,7 @@ enable_output_wrapping                    = true;
 enable_undo_fade_out                      = true;
 
 cursor_roundness                          = 0;
-mark_thickness                            = 5;
+mark_thickness                            = 2;
 cursor_height                             = 90;
 lister_roundness                          = 0;
 
@@ -40,7 +39,7 @@ session_file                              = ".session.4coder";
 
 //- indentation
 enable_virtual_whitespace                 = true;
-virtual_whitespace_regular_indent         = 4;
+virtual_whitespace_regular_indent         = 2;
 
 indent_with_tabs                          = true;
 indent_width                              = 4;
@@ -59,7 +58,7 @@ default_font_name                         = "liberation-mono.ttf";
 // default_font_name                      = "AtkinsonHyperlegibleMono-Regular.ttf";
 
 
-default_font_size                         = 22;
+default_font_size                         = 24;
 
 //- dont care
 
