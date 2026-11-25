@@ -98,6 +98,7 @@ byp_vim_bindings(Application_Links *app){
     VimBind(N|MAP, nasr_vim_sort_lines,                          SUB_G, KeyCode_S);
     VimBind(N|MAP, nasr_vim_sort_lines_by,                       SUB_G, (Sft|KeyCode_S));
     VimBind(N|MAP, nasr_vim_align_char,                          SUB_G, KeyCode_A);
+    VimBind(N|MAP, nasr_vim_align_all,                           SUB_G, (Sft|KeyCode_A));
     VimBind(N|MAP, nasr_vim_number_lines,                        SUB_G, (Ctl|KeyCode_A));
     VimBind(N|MAP, nasr_vim_macro_lines_run,                     SUB_G, (Sft|KeyCode_2));
     VimBind(N|MAP, nasr_vim_narrow,                              SUB_Z, KeyCode_N);

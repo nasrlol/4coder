@@ -144,8 +144,13 @@ CUSTOM_DOC("Default command for responding to a startup event")
  // TODO(allen): Actually determine this in a fair way.
  // Maybe switch to an enum?
  // Actually probably a pointer to a struct that defines the language.
- state.do_cpp_parse = true;
+ // NOTE(nasr): Odin gets the generic parse (nests) plus its own declaration pass.
+ b32 is_odin = nasr_buffer_is_odin(app, buffer_id);
+ state.do_cpp_parse = !is_odin;
  generic_parse_full_input_breaks(index, &state, max_i32);
+ if (is_odin){
+ nasr_odin_index(index, &state);
+ }
 
  code_index_lock();
  code_index_set_file(buffer_id, arena, index);
@@ -676,11 +681,13 @@ CUSTOM_DOC("Default command for responding to a startup event")
  Scratch_Block scratch(app);
 
  String_Const_u8 contents = {};
+ b32 is_odin = false;
  {
  ProfileBlock(app, "async lex contents (before mutex)");
  acquire_global_frame_mutex(app);
  ProfileBlock(app, "async lex contents (after mutex)");
  contents = push_whole_buffer(app, scratch, buffer_id);
+ is_odin = nasr_buffer_is_odin(app, buffer_id);
  release_global_frame_mutex(app);
  }
 
@@ -691,7 +698,11 @@ CUSTOM_DOC("Default command for responding to a startup event")
 
  Lex_State_Cpp state = {};
  lex_full_input_cpp_init(&state, contents);
- for (;;){
+ // NOTE(nasr): the Odin lexer runs in one pass (no incremental breaks)
+ if (is_odin){
+ list = nasr_lex_odin(scratch, contents);
+ }
+ else for (;;){
  ProfileBlock(app, "async lex block");
  if (lex_full_input_cpp_breaks(scratch, &list, &state, limit_factor)){
  break;
@@ -996,7 +1007,8 @@ CUSTOM_DOC("Default command for responding to a startup event")
  Range_i64 relex_range = Ii64(token_first->pos, token_resync->pos + token_resync->size + text_shift);
  String_Const_u8 partial_text = push_buffer_range(app, scratch, buffer_id, relex_range);
 
- Token_List relex_list = lex_full_input_cpp(scratch, partial_text);
+ Token_List relex_list = nasr_buffer_is_odin(app, buffer_id) ?
+ nasr_lex_odin(scratch, partial_text) : lex_full_input_cpp(scratch, partial_text);
  if (relex_range.one_past_last < buffer_get_size(app, buffer_id)){
  token_drop_eof(&relex_list);
  }

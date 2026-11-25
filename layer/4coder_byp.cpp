@@ -47,6 +47,7 @@ int     a    = 3;
 
 #include "4coder_byp_token.cpp"
 #include "4coder_nasr_language.cpp"
+#include "4coder_nasr_odin.cpp"
 
 #include "4coder_byp_build.cpp"
 #include "4coder_byp_colors.cpp"

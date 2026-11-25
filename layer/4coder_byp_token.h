@@ -5,6 +5,8 @@ enum{
  byp_TokenKind_Primitive = 16,
  byp_TokenKind_ControlFlow = 17,
  byp_TokenKind_Struct = 18,
+ // NOTE(nasr): Odin struct/union/enum/proc/...: struct color, but no "};" auto-insert
+ byp_TokenKind_TypeKeyword = 19,
 };
 
 // NOTE(nasr): buffer language, see 4coder_byp_language.cpp
@@ -31,9 +33,15 @@ enum{
  NasrLang_JavaScript,
  NasrLang_TypeScript,
  NasrLang_Json,
+ NasrLang_Odin,
 };
 
 // NOTE(nasr): forward declared so the default hooks can use it
 function Nasr_Language nasr_buffer_language(Application_Links *app, Buffer_ID buffer);
+
+// NOTE(nasr): Odin, see 4coder_nasr_odin.cpp (used by the default lex/index hooks)
+function b32 nasr_buffer_is_odin(Application_Links *app, Buffer_ID buffer);
+function Token_List nasr_lex_odin(Arena *arena, String_Const_u8 text);
+function void nasr_odin_index(Code_Index_File *index, Generic_Parse_State *state);
 
 #endif

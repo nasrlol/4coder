@@ -45,7 +45,7 @@ indent_with_tabs                          = true;
 indent_width                              = 4;
 default_tab_width                         = 4;
 
-treat_as_code                             = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.md.4coder.jai.vert.frag.rs.jr";
+treat_as_code                             = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.md.4coder.jai.vert.frag.rs.jr.odin";
 
 highlight_line_at_cursor                  = true;
 default_font_hinting                      = false;
@@ -58,7 +58,7 @@ default_font_name                         = "liberation-mono.ttf";
 // default_font_name                      = "AtkinsonHyperlegibleMono-Regular.ttf";
 
 
-default_font_size                         = 24;
+default_font_size                         = 14;
 
 //- dont care
 

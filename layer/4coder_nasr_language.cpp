@@ -13,6 +13,7 @@ global Nasr_Language_Info nasr_language_table[] = {
  {NasrLang_CHeader,     "C/C++",       ".h"},
  {NasrLang_Rust,        "Rust",        ".rs"},
  {NasrLang_Jai,         "Jai",         ".jai"},
+ {NasrLang_Odin,        "Odin",        ".odin"},
  {NasrLang_CSharp,      "C#",          ".cs"},
  {NasrLang_Java,        "Java",        ".java"},
  {NasrLang_Glsl,        "GLSL",        ".glsl.vert.frag.geom.comp"},

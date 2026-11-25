@@ -16,7 +16,7 @@
 //  gp SPEC                    put register lines into SPEC on each line (1 line = every line)
 //  gx i<obj>                  swap the object at the cursor with the same object at the mark
 //  gs / gS SPEC               sort region lines / sort them by SPEC's text on each line
-//  ga<c>                      align the first <c> on every region line
+//  ga<c> / ga<Ret>str<Ret>    align the first <c>/string on every region line (gA: every occurrence)
 //  g Ctrl-A                   add 0,1,2,... (x count) to the first number on each region line
 //  g@<reg>                    run vim macro <reg> on every region line (q/@ record/play macros)
 //  zn / zN                    narrow: fold everything outside the region / widen again
@@ -804,43 +804,189 @@ VIM_COMMAND_SIG(nasr_vim_sort_lines_by){
  nasr_vim_sort_region(app, &spec);
 }
 
-//~ ga : align the first <c> on every region line
+//~ ga / gA : align region lines on a character or string (like emacs align-regexp)
+//
+//  ga<c>        align the first <c> on every region line
+//  ga<Return>   prompt for a string (e.g. := -> //), Return to align on its first occurrence
+//  gA<c> / gA<Return>   same, but align every occurrence, column by column
+//
+// Whitespace in front of each match is normalized first: collapsed to one space if there was
+// any, left at zero if there was none, and left alone if it is the line's indentation. Then the
+// matches are padded with spaces to a common visual column (tabs and UTF-8 are accounted for).
+// Running it twice gives the same result.
 
-VIM_COMMAND_SIG(nasr_vim_align_char){
- View_ID view = get_active_view(app, Access_ReadVisible);
- Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
- u8 c = vim_query_user_key(app, string_u8_litexpr("-- ALIGN ON CHAR --"));
- if(c == 0){ vim_reset_state(); return; }
+// Returns false on abort. On success, *out holds the pattern (single char or typed string).
+function b32
+nasr_vim_align_query(Application_Links *app, Arena *arena, String_Const_u8 *out, b32 all){
+ local_persist u8 saved[256];
+ u64 saved_size = Min(vim_bot_text.size, sizeof(saved));
+ block_copy(saved, vim_bot_text.str, saved_size);
+
+ String_Const_u8 prompt = (all ? string_u8_litexpr("-- ALIGN ALL ON (char, or Return for string) --") :
+                           string_u8_litexpr("-- ALIGN ON (char, or Return for string) --"));
+ vim_set_bottom_text(prompt);
+ vim_is_querying_user_key = true;
+ vim_state.chord_resolved = false;
+
+ b32 ok = false;
+ b32 string_mode = false;
+ for(;;){
+  User_Input in = get_next_input(app, EventPropertyGroup_Any, EventProperty_Escape);
+  if(in.abort){ break; }
+  if(in.event.kind == InputEventKind_TextInsert && in.event.text.string.size > 0){
+   *out = push_string_copy(arena, in.event.text.string);
+   ok = true;
+   break;
+  }
+  if(match_key_code(&in, KeyCode_Return)){ string_mode = true; break; }
+  leave_current_input_unhandled(app);
+ }
+ vim_is_querying_user_key = false;
+
+ if(string_mode){
+  local_persist u8 query_mem[128];
+  String_u8 query = Su8(query_mem, 0, sizeof(query_mem));
+  String_Const_u8 prefix = string_u8_litexpr("Align on: ");
+  vim_use_bottom_cursor = true;
+  for(;;){
+   vim_set_bottom_text(prefix);
+   string_append(&vim_bot_text, query.string);
+   animate_in_n_milliseconds(app, 0);
+   User_Input in = get_next_input(app, EventPropertyGroup_Any, EventProperty_Escape);
+   if(in.abort){ break; }
+   if(match_key_code(&in, KeyCode_Return)){
+    if(query.size > 0){ *out = push_string_copy(arena, query.string); ok = true; }
+    break;
+   }
+   String_Const_u8 text = to_writable(&in);
+   if(text.str != 0 && text.size > 0){ string_append(&query, text); }
+   else if(match_key_code(&in, KeyCode_Backspace)){ query.string = backspace_utf8(query.string); }
+   else{ leave_current_input_unhandled(app); }
+  }
+  vim_use_bottom_cursor = false;
+ }
+
+ vim_set_bottom_text(i32(saved_size), (char *)saved);
+ vim_state.chord_resolved = true;
+ return ok;
+}
+
+// Visual width of text starting at column 0: tabs jump to the next tab stop, UTF-8
+// continuation bytes don't count.
+function i64
+nasr_vim_align_width(String_Const_u8 text, i64 tab_width){
+ i64 col = 0;
+ for(u64 i = 0; i < text.size; i += 1){
+  u8 c = text.str[i];
+  if(c == '\t'){ col += tab_width - (col % tab_width); }
+  else if((c & 0xC0) != 0x80){ col += 1; }
+ }
+ return col;
+}
+
+struct Nasr_Vim_Align_Line{
+ String_Const_u8 text;
+ Range_i64 *matches;     // byte ranges of the matched pattern within text
+ i32 match_count;
+ String_u8 out;          // rebuilt line
+ u64 consumed;           // bytes of text already copied into out
+};
+
+function void
+nasr_vim_align(Application_Links *app, b32 all){
+ View_ID view = get_active_view(app, Access_ReadWriteVisible);
+ Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+ if(buffer == 0){ vim_reset_state(); return; }
+
+ Scratch_Block scratch(app);
+ String_Const_u8 pattern = {};
+ if(!nasr_vim_align_query(app, scratch, &pattern, all) || pattern.size == 0){ vim_reset_state(); return; }
+
+ i64 tab_width = i64(def_get_config_u64(app, vars_save_string_lit("default_tab_width")));
+ if(tab_width <= 0){ tab_width = 4; }
+
+ b32 ws_pattern = true;
+ for(u64 i = 0; i < pattern.size; i += 1){ ws_pattern = ws_pattern && character_is_whitespace(pattern.str[i]); }
 
  Nasr_Vim_Region_Lines region = nasr_vim_region_lines(app, view, buffer);
  i64 count = region.max - region.min + 1;
- Scratch_Block scratch(app);
- i64 *columns = push_array(scratch, i64, count);
- i64 target = -1;
+ Nasr_Vim_Align_Line *lines = push_array_zero(scratch, Nasr_Vim_Align_Line, count);
+
+ // find matches on every line
+ i32 max_columns = 0;
+ i64 max_text = 0;
  for(i64 i = 0; i < count; i += 1){
+  Nasr_Vim_Align_Line *l = &lines[i];
   i64 line = region.min + i;
-  i64 start = get_line_start_pos(app, buffer, line);
-  String_Const_u8 text = push_buffer_range(app, scratch, buffer, Ii64(start, get_line_end_pos(app, buffer, line)));
-  columns[i] = -1;
-  for(u64 k = 0; k < text.size; k += 1){
-   if(text.str[k] == c){ columns[i] = i64(k); break; }
+  l->text = push_buffer_range(app, scratch, buffer, Ii64(get_line_start_pos(app, buffer, line), get_line_end_pos(app, buffer, line)));
+  i32 cap = (all ? i32(l->text.size/pattern.size) + 1 : 1);
+  l->matches = push_array(scratch, Range_i64, cap);
+  u64 at = 0;
+  while(l->match_count < cap && at + pattern.size <= l->text.size){
+   u64 found = string_find_first(string_skip(l->text, at), pattern);
+   if(at + found + pattern.size > l->text.size){ break; }
+   u64 match_min = at + found;
+   u64 match_max = match_min + pattern.size;
+   if(ws_pattern){
+    // a whitespace pattern matches the whole run, and indentation is never a column
+    while(match_max < l->text.size && character_is_whitespace(l->text.str[match_max])){ match_max += 1; }
+    if(match_min == 0){ at = match_max; continue; }
+   }
+   l->matches[l->match_count++] = Ii64(match_min, match_max);
+   at = match_max;
   }
-  target = Max(target, columns[i]);
+  max_text = Max(max_text, nasr_vim_align_width(l->text, tab_width));
+  max_columns = Max(max_columns, l->match_count);
  }
- if(target < 0){ vim_reset_state(); return; }
+ if(max_columns == 0){ vim_reset_state(); return; }
+ // every pad is at most the widest line in the region, so this can't overflow
+ for(i64 i = 0; i < count; i += 1){
+  Nasr_Vim_Align_Line *l = &lines[i];
+  lines[i].out = string_u8_push(scratch, l->text.size + u64(l->match_count + 1)*u64(max_text + 1));
+ }
+
+ // build each column: append the text up to the match (whitespace normalized), find the widest,
+ // then pad everyone to it and append the match itself
+ for(i32 k = 0; k < max_columns; k += 1){
+  i64 target = -1;
+  for(i64 i = 0; i < count; i += 1){
+   Nasr_Vim_Align_Line *l = &lines[i];
+   if(k >= l->match_count){ continue; }
+   u64 match_start = u64(l->matches[k].min);
+   u64 ws = match_start;
+   while(ws > l->consumed && character_is_whitespace(l->text.str[ws - 1])){ ws -= 1; }
+   b32 is_indent = (ws == 0);
+   if(is_indent){ ws = match_start; }
+   string_append(&l->out, string_substring(l->text, Ii64(i64(l->consumed), i64(ws))));
+   if(!is_indent && ws < match_start){ string_append_character(&l->out, ' '); }
+   l->consumed = match_start;
+   target = Max(target, nasr_vim_align_width(l->out.string, tab_width));
+  }
+  for(i64 i = 0; i < count; i += 1){
+   Nasr_Vim_Align_Line *l = &lines[i];
+   if(k >= l->match_count){ continue; }
+   i64 width = nasr_vim_align_width(l->out.string, tab_width);
+   for(i64 p = width; p < target; p += 1){ string_append_character(&l->out, ' '); }
+   string_append(&l->out, (ws_pattern ? pattern : string_substring(l->text, l->matches[k])));
+   l->consumed = u64(l->matches[k].max);
+  }
+ }
 
  History_Group history = history_group_begin(app, buffer);
  for(i64 i = count - 1; i >= 0; i -= 1){
-  if(columns[i] < 0 || columns[i] == target){ continue; }
-  i64 pad = target - columns[i];
-  String_Const_u8 spaces = string_const_u8_push(scratch, pad);
-  block_fill_u8(spaces.str, pad, ' ');
-  i64 pos = get_line_start_pos(app, buffer, region.min + i) + columns[i];
-  buffer_replace_range(app, buffer, Ii64(pos), spaces);
+  Nasr_Vim_Align_Line *l = &lines[i];
+  if(l->match_count == 0){ continue; }
+  string_append(&l->out, string_skip(l->text, l->consumed));
+  if(string_match(l->out.string, l->text)){ continue; }
+  i64 start = get_line_start_pos(app, buffer, region.min + i);
+  buffer_replace_range(app, buffer, Ii64(start, start + i64(l->text.size)), l->out.string);
  }
  history_group_end(history);
  vim_reset_state();
 }
+
+VIM_COMMAND_SIG(nasr_vim_align_char){ nasr_vim_align(app, false); }
+VIM_COMMAND_SIG(nasr_vim_align_all){ nasr_vim_align(app, true); }
 
 //~ g Ctrl-A : number the region lines
 

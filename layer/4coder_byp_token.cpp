@@ -8,6 +8,7 @@ byp_highlight_token(Token_Base_Kind kind){
  case byp_TokenKind_Primitive:
  case byp_TokenKind_ControlFlow:
  case byp_TokenKind_Struct:
+ case byp_TokenKind_TypeKeyword:
  return true;
  }
  return false;
@@ -34,7 +35,8 @@ byp_highlight_token(Token_Base_Kind kind){
 
  case byp_TokenKind_ControlFlow:{ color = defcolor_control; }break;
  case byp_TokenKind_Primitive:{ color = defcolor_primitive; }break;
- case byp_TokenKind_Struct:{ color = defcolor_struct; }break;
+ case byp_TokenKind_Struct:
+ case byp_TokenKind_TypeKeyword:{ color = defcolor_struct; }break;
  }
  // specifics override generals
  switch (token.sub_kind){

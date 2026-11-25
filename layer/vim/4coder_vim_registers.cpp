@@ -137,6 +137,54 @@ vim_update_registers(Application_Links *app){
  vim_default_register();
  }
 
+ // NOTE(nasr): Always paste on its own line, below (after) or above (!after) the cursor line
+ function void
+ vim_paste_new_line(Application_Links *app, View_ID view, Buffer_ID buffer, Vim_Register *reg, b32 after){
+ if(reg->edit_type == EDIT_Block){ vim_block_paste(app, view, buffer, reg); return; }
+
+ if(reg == &vim_registers.system){
+ clipboard_update_history_from_system(app, 0);
+ clipboard_update_history_from_system(app, 0);
+ i32 count = clipboard_count(0);
+ if(count > 0){
+ Managed_Scope scope = view_get_managed_scope(app, view);
+ i32 *paste_index = scope_attachment(app, scope, view_paste_index_loc, i32);
+ if(paste_index){
+ Scratch_Block scratch(app);
+ vim_register_copy(reg, push_clipboard_index(app, scratch, 0, *paste_index=0));
+ vim_update_registers(app);
+ }
+ }
+ }
+
+ String_Const_u8 text = reg->data.string;
+ while(text.size > 0 && (text.str[text.size-1] == '\n' || text.str[text.size-1] == '\r')){ text.size--; }
+
+ Scratch_Block scratch(app);
+ i64 line = get_line_number_from_pos(app, buffer, view_get_cursor_pos(app, view));
+ i64 pos, line_start;
+ String_Const_u8 insert;
+ if(after){
+ pos = get_line_end_pos(app, buffer, line);
+ insert = push_u8_stringf(scratch, "\n%.*s", string_expand(text));
+ line_start = pos + 1;
+ }else{
+ pos = get_line_start_pos(app, buffer, line);
+ insert = push_u8_stringf(scratch, "%.*s\n", string_expand(text));
+ line_start = pos;
+ }
+
+ buffer_replace_range(app, buffer, Ii64(pos), insert);
+ view_set_mark(app, view, seek_pos(line_start));
+ view_set_cursor_and_preferred_x(app, view, seek_pos(line_start));
+
+ ARGB_Color argb = fcolor_resolve(fcolor_id(defcolor_paste));
+ buffer_post_fade(app, buffer, 0.667f, Ii64_size(line_start, text.size), argb);
+
+ vim_state.prev_params.selected_reg = vim_state.params.selected_reg;
+ vim_default_register();
+ }
+
 
  VIM_COMMAND_SIG(vim_select_register){
  vim_is_selecting_register = true;

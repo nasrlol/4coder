@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ME="$(readlink -f "$0")"
 LOCATION="$(dirname "$ME")"

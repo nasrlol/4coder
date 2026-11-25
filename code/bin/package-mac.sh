@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 chmod +x bin/build-mac.sh
 bin/build-mac.sh "-DPACKAGE_SUPER_X64"
