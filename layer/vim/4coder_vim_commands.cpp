@@ -109,8 +109,10 @@ CUSTOM_DOC("Toggles buffer peek")
   VIM_COMMAND_SIG(vim_insert_mode_after){
   View_ID view = get_active_view(app, Access_ReadVisible);
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
-  i64 line = get_line_number_from_pos(app, buffer, view_get_cursor_pos(app, view));
-  if(!line_is_valid_and_blank(app, buffer, line)){
+  // NOTE(nasr): `a` appends on the current line -- never step past the line ending
+  i64 pos = view_get_cursor_pos(app, view);
+  i64 line_end = get_line_end_pos(app, buffer, get_line_number_from_pos(app, buffer, pos));
+  if(pos < line_end){
   move_right(app);
   }
   vim_enter_insert_mode(app);
