@@ -1,1 +1,51 @@
-pasting should always make a new line
+~ memory safety
+
+
+layer/vim/4coder_vim_search.cpp:68: `if(reg->data.size < 256) vim_realloc_string(&reg->data, 0)` reallocs to VIM_GROW_RATE(0) = 128 bytes but block_copy's the old size bytes into it (4coder_vim.h:120) -> heap overflow when the previous search was 129..255 bytes; the query also never grows past 128 (string_append at vim_search.cpp:93 is capped), so long searches are silently cut -> check cap, not size, and grow the register in the input loop
+layer/vim/4coder_vim_lister.cpp:407: text_field (up to 256 bytes, lister_base.h:73) is block_copy'd into vim_bot_buffer[256] (vim.h:13) after a prefix like "Command:"/"Switch:" with no bound; same at vim_lister.cpp:461 with highlighted_node->string on Return -> global overflow with a long filter or a long file/command name; clamp to the space left in vim_bot_text
+layer/vim/4coder_vim_registers.cpp:29: `reg->data.str[size-1]` reads one byte before the data when a register is Set but empty; `/foo<Esc>` does exactly that (search sets REGISTER_Set while typing, Esc sets size 0 at vim_search.cpp:84) -> guard size > 0
+layer/4coder_byp_draw.cpp:658: hex color preview: `i+=9; goto byp_hex_scan;` jumps back into the loop body without re-checking `i < range_size-9`, so a `0x` near the end of the visible range reads text[i..i+9] past the pushed range -> `continue` with i += 9 instead of the goto
+
+
+~ vim behaviour
+
+
+layer/vim/4coder_vim_commands.cpp:509: charwise `p` with the gap cursor at line end: move_right crosses the newline, text is pasted at the start of the next line (same bug as the uncommitted `a` fix in vim_insert_mode_after) -> only move right when pos < line end
+layer/vim/4coder_vim_commands.cpp:504: linewise `p` on the last line of a file without a trailing newline: seek_end_of_line + move_right can't move, "text\n" is inserted right after the last char and joins the line ("pasting should always make a new line") -> insert a "\n" first when at end of buffer
+layer/vim/4coder_vim_commands.cpp:547: `x` copies the wrong char into the small delete register: it deletes [pos, pos+1) but reads buffer_get_char(start) with start = pos+1 (the char after the deleted one); `X` at column 0 and `x` at line end delete the newline and join lines; count is ignored -> read the range that is deleted, stop at line bounds
+layer/vim/4coder_vim_commands.cpp:252: `r` at line end / on an empty line replaces the '\n' and joins lines; `~` (vim_commands.cpp:282) does the same replace on '\n' (no-op edit, still a history entry) -> do nothing on the line end
+layer/vim/4coder_vim_movement.cpp:552: `if(range.min && range.max)` treats a text object starting at buffer pos 0 as not found -> `diw` on the first word of a file does nothing; use a separate valid flag
+layer/vim/4coder_vim_movement.cpp:540: exclusive bounce objects: `if(range.min >= range.max) range = {}` after min++/max-- drops a single char -> `di(` on `(x)` does nothing; should be `>` (same at vim_movement.cpp:498)
+layer/vim/4coder_vim_commands.cpp:680: marks at pos 0 count as unset (`pos > 0`) -> "Mark a not set" for a mark on the first char; vim_prev_visual has the same check (vim_commands.cpp:185) so `gv` can't restore a selection starting at 0
+layer/vim/4coder_vim_commands.cpp:691: global mark goto calls vim_push_jump twice (again at vim_commands.cpp:694); vim_open_file_in_quotes too (vim_commands.cpp:723 and :746) -> duplicate jump stack entries
+layer/vim/4coder_vim_commands.cpp:791: move selection down onto a last line without a trailing newline: paste_pos clamps to buffer size and the copied lines are glued to the end of the last line; moving the last line up (copy_range.max + 1 past the end, vim_commands.cpp:789) copies it without a newline and joins it with the line above
+layer/vim/4coder_vim_commands.cpp:636: `3J` joins 3 times (4 lines), vim joins 3 lines (2 joins); N = Max(1, count - 1)
+layer/vim/4coder_vim_search.cpp:84: Esc during incremental search leaves the cursor on the last match instead of restoring where the search started, and leaves the search register Set with size 0 (hits the registers.cpp:29 read above)
+layer/vim/4coder_nasr_vim_multiline.cpp:333: region spec `n` matches the search register case-sensitively (string_match) but `/` searches insensitively (vim_search.cpp:119) -> `drn` misses matches that `/` found
+
+
+~ completion / position context
+
+
+layer/4coder_byp_draw.cpp:1067: ghost text preview only checks that the next char is whitespace, so `foo| bar` draws the suggestion over " bar" -> require line end (or only trailing whitespace) after the cursor
+layer/4coder_nasr_member_complete.cpp:380: needle only extends backwards, completing at `a.fo|o` replaces "fo" and leaves the trailing "o" ("a.fieldo") -> extend needle.max forward over the identifier too
+layer/4coder_nasr_member_complete.cpp:341: struct field scan takes any identifier followed by ; , [ = : as a field, so `Foo x = bar;` inside a struct adds `bar`; method bodies are skipped but default initializers aren't -> skip from `=` to the next , or ;
+layer/4coder_nasr_member_complete.cpp:409: matches are case-insensitive but the ghost preview (byp_draw.cpp:1076) slices the suffix by needle size, so typing "Fo" previews "Foo" while Tab inserts "foo"
+layer/4coder_byp_draw.cpp:546: pos context loop has no iteration cap (calls_found < 4 only), every frame it walks back to the start of the file when the cursor isn't inside calls -> cap it like nasr_struct_context_find (4096); also `foo((x|`: the paren_nest == 0 `(` branch already dec'd once, the dec at byp_draw.cpp:573 skips the outer `(` and foo is never found
+
+
+~ struct context (disabled under #if 0 at byp_draw.cpp:525, broken when turned back on)
+
+
+layer/4coder_nasr_struct_context.cpp:212: designator is taken from the first `.name` found walking back, past commas -> `{.a = 1, |}` highlights `a` instead of the next field; stop looking for a designator once field_idx > 0
+layer/4coder_nasr_struct_context.cpp:260: `ident ( name ) {` is read as a compound literal, so `if (cond) {` / `while (running) {` look up a struct named after the variable -> check the token before the `(` is not a keyword/identifier
+layer/4coder_nasr_struct_context.cpp:152: nasr_code_index_find_struct walks every buffer's notes and tokens under code_index_lock every frame -> cache on buffer/pos/history like the complete preview
+layer/4coder_nasr_struct_context.cpp:307: field index in the tooltip counts every ; and , at depth 1 (method decls, static members) but the initializer index only counts commas -> highlights the wrong field for structs with methods
+
+
+~ minor / conditional
+
+
+layer/vim/4coder_vim_commands.cpp:592: CRLF files: `J` deletes from the '\n' (get_line_end_pos), the '\r' stays ("foo\r bar"); multiline `A`/`$` specs (nasr_vim_multiline.cpp:241, :256) and the new `a` check (vim_commands.cpp:115) also treat '\r' as text (`a` on an empty CRLF line steps between \r and \n); only matters if buffers keep their \r
+layer/vim/4coder_vim_commands.cpp:49: buffer peek scroll divides by buffer_get_line_count, which is 0 when the peeked buffer was killed -> NaN ratio
+layer/4coder_nasr_language.cpp:78: language is cached once per buffer and never reset, a save-as to another extension keeps the old language (file bar + member complete gate)
