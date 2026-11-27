@@ -35,6 +35,8 @@ global Vec2_f32 vim_nxt_cursor_pos;
 global Vec2_f32 vim_cur_cursor_pos;
 
 global View_ID vim_lister_view_id;
+global View_ID vim_cur_active_view;
+global View_ID vim_prev_active_view;
 
 global f32 vim_nxt_filebar_offset;
 global f32 vim_cur_filebar_offset;
@@ -85,6 +87,7 @@ function Rect_f32 vim_get_bottom_rect(Application_Links *app){
  function void vim_reset_bottom_text(){ vim_bot_text.size=0; }
 
  function void vim_set_bottom_text(i32 size, char *str){
+ size = clamp(0, size, i32(ArrayCount(vim_bot_buffer)));
  block_copy(vim_bot_buffer, str, size);
  vim_bot_text.size = size;
  }

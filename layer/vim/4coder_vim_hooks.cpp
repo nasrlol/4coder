@@ -146,9 +146,12 @@ CUSTOM_DOC("Input consumption loop for vim behavior")
   Managed_Scope scope = buffer_get_managed_scope(app, buffer_id);
   Vim_Prev_Visual *prev_visual = scope_attachment(app, scope, vim_buffer_prev_visual, Vim_Prev_Visual);
   prev_visual->cursor_pos = prev_visual->mark_pos = 0;
+ prev_visual->valid = false;
 
-  i64 *marks = (i64 *)managed_scope_get_attachment(app, scope, vim_buffer_marks, 26*sizeof(i64));
-  block_fill_u64(marks, 26*sizeof(i64), max_u64);
+  // NOTE(nasr): marks are stored as pos+1 so 0 = unset; buffers that never went through this
+  // hook (created before the hooks were set) get zeroed attachments and read as unset too
+  i64 *marks = vim_buffer_marks_get(app, buffer_id);
+  if(marks){ block_zero(marks, 26*sizeof(i64)); }
   }
 
   BUFFER_HOOK_SIG(vim_begin_buffer){
@@ -189,15 +192,41 @@ CUSTOM_DOC("Input consumption loop for vim behavior")
   #endif
   }
 
+  // NOTE(nasr): keep a mark on its character across an edit that replaced old_range with
+  // new_range: after the edit -> shift by the size change; inside replaced/deleted text -> clamp
+  // into the new text (a pure insertion at the mark pushes it along, like the character it's on)
+  function i64
+  vim_shift_mark_pos(i64 pos, Range_i64 old_range, Range_i64 new_range){
+  if(pos >= old_range.max){ pos += range_size(new_range) - range_size(old_range); }
+  else if(pos > old_range.min){ pos = Min(pos, new_range.max); }
+  return pos;
+  }
+
+  function void
+  vim_shift_marks(Application_Links *app, Buffer_ID buffer_id, Range_i64 new_range, Range_Cursor old_cursor_range){
+  Range_i64 old_range = Ii64(old_cursor_range.min.pos, old_cursor_range.max.pos);
+  i64 *marks = vim_buffer_marks_get(app, buffer_id);
+  if(marks){
+  for(i32 i = 0; i < 26; i += 1){
+  if(marks[i] > 0){ marks[i] = vim_shift_mark_pos(marks[i] - 1, old_range, new_range) + 1; }
+  }
+  }
+  for(i32 i = 0; i < ArrayCount(vim_global_marks); i += 1){
+  Vim_Global_Mark *mark = vim_global_marks + i;
+  if(mark->buffer_id.id == buffer_id){ mark->pos = vim_shift_mark_pos(mark->pos, old_range, new_range); }
+  }
+  }
+
   BUFFER_EDIT_RANGE_SIG(vim_buffer_edit_range){
   default_buffer_edit_range(app, buffer_id, new_range, old_cursor_range);
   fold_buffer_edit_range_inner(app, buffer_id, new_range, old_cursor_range);
-  // TODO(BYP): Update marks here as well
+  vim_shift_marks(app, buffer_id, new_range, old_cursor_range);
   return 0;
   }
 
   function void
   vim_tick(Application_Links *app, Frame_Info frame_info){
+  vim_track_active_view(app);
   code_index_update_tick(app);
   if(tick_all_fade_ranges(app, frame_info.animation_dt)){
   animate_in_n_milliseconds(app, 0);
@@ -206,7 +235,7 @@ CUSTOM_DOC("Input consumption loop for vim behavior")
   vim_animate_filebar(app, frame_info);
   vim_animate_cursor(app, frame_info);
   #if VIM_DO_ANIMATE
-  vim_cursor_blink += frame_info.animation_dt;
+  vim_advance_cursor_blink(frame_info);
   #endif
 
   fold_tick(app, frame_info);
@@ -218,8 +247,10 @@ CUSTOM_DOC("Input consumption loop for vim behavior")
   }
   }
 
-  CUSTOM_COMMAND_SIG(vim_try_exit)
-  CUSTOM_DOC("Vim command for responding to a try-exit event")
+  // NOTE(nasr): plain function, not a command: only meant to run through try_exit
+  // (4coder_byp_tabs.cpp), which saves the tab session first
+  function void
+  vim_try_exit(Application_Links *app)
   {
   User_Input input = get_current_input(app);
   if(match_core_code(&input, CoreCode_TryExit)){

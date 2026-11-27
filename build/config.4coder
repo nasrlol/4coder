@@ -14,12 +14,12 @@ use_paren_helper                          = true;
 use_comment_keyword                       = true;
 
 lister_whole_word_backspace_when_modified = true;
-show_line_number_margins                  = true;
+show_line_number_margins                  = false;
 enable_output_wrapping                    = true;
 enable_undo_fade_out                      = true;
 
 cursor_roundness                          = 0;
-mark_thickness                            = 2;
+mark_thickness                            = 3;
 cursor_height                             = 90;
 lister_roundness                          = 0;
 
@@ -39,7 +39,7 @@ session_file                              = ".session.4coder";
 
 //- indentation
 enable_virtual_whitespace                 = true;
-virtual_whitespace_regular_indent         = 2;
+virtual_whitespace_regular_indent         = 4;
 
 indent_with_tabs                          = true;
 indent_width                              = 4;
@@ -48,7 +48,7 @@ default_tab_width                         = 4;
 treat_as_code                             = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.md.4coder.jai.vert.frag.rs.jr.odin";
 
 highlight_line_at_cursor                  = true;
-default_font_hinting                      = false;
+default_font_hinting                      = true;
 default_theme_name                        = "theme-default";
 // default_font_name                      = "jetbrains-mono.ttf";
 default_font_name                         = "liberation-mono.ttf";
@@ -58,7 +58,7 @@ default_font_name                         = "liberation-mono.ttf";
 // default_font_name                      = "AtkinsonHyperlegibleMono-Regular.ttf";
 
 
-default_font_size                         = 14;
+default_font_size                         = 16;
 
 //- dont care
 

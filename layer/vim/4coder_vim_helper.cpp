@@ -3,9 +3,34 @@ CUSTOM_COMMAND_SIG(no_op)
 CUSTOM_DOC("no op for binding keybinds to resolve without side effect")
 {}
 
+// NOTE(nasr): per-buffer a-z marks, stored as pos+1 (0 = unset, so a zeroed attachment is
+// "no marks"). Shifted on edits by vim_shift_marks (4coder_vim_hooks.cpp).
+function i64 *vim_buffer_marks_get(Application_Links *app, Buffer_ID buffer){
+ Managed_Scope scope = buffer_get_managed_scope(app, buffer);
+ return (i64 *)managed_scope_get_attachment(app, scope, vim_buffer_marks, 26*sizeof(i64));
+ }
+
+// NOTE(nasr): ACTIVE_BLINK flips every pi/3 s and goes solid after 10 s. Only wake for the next
+// flip instead of every frame (that was a 60fps redraw for 10 s after each keystroke).
+// vim_cursor_blink advances by real time in the tick (vim_advance_cursor_blink), so the
+// sparse wakeups don't stall it.
 function b32 vim_show_cursor(Application_Links *app){
- if(vim_cursor_blink < 10.f){ animate_in_n_milliseconds(app, 0); }
- return ACTIVE_BLINK(vim_cursor_blink);
+ f32 b = vim_cursor_blink;
+ if(b < 10.f){
+ f32 period = pi_f32/3.f;
+ f32 next_flip = Min((f32)((i32)(b/period) + 1)*period, 10.f);
+ u32 ms = (u32)((next_flip - b)*1000.f) + 2;
+ animate_in_n_milliseconds(app, ms);
+ }
+ return ACTIVE_BLINK(b);
+ }
+
+// NOTE(nasr): called from the tick, which runs after the frame's input. A key that just reset
+// the blink to 0 must not get this frame's dt added (it can be seconds of idle), so the reset
+// frame only marks it as started.
+function void vim_advance_cursor_blink(Frame_Info frame_info){
+ if(vim_cursor_blink == 0.f){ vim_cursor_blink = 1e-6f; }
+ else{ vim_cursor_blink += frame_info.literal_dt; }
  }
 
  // Blocking call
@@ -93,6 +118,7 @@ function b32 vim_show_cursor(Application_Links *app){
  prev_visual->cursor_pos = view_get_cursor_pos(app, view);
  prev_visual->mark_pos = view_get_mark_pos(app, view);
  prev_visual->edit_type = vim_state.params.edit_type;
+ prev_visual->valid = true;
  }
  }
 

@@ -71,6 +71,107 @@ byp_highlight_token(Token_Base_Kind kind){
  }
  }
 
+//~ NOTE(nasr): dim the dead branch of `#if 0` (up to its `#else` / `#elif` / `#endif`)
+// The token array is scanned once per edit/relex (no API calls in the loop, just the array),
+// the result is cached per buffer in a few slots, and drawing only checks the visible tokens.
+
+#define BYP_IF0_SLOTS 8
+
+struct Byp_If0_Cache{
+ Buffer_ID buffer;
+ Token *tokens;
+ i64 token_count;
+ History_Record_Index history;
+ i32 count;
+ i32 cap;
+ Range_i64 *ranges; // heap, grows as needed (used to be a fixed 64 that silently stopped)
+};
+global Byp_If0_Cache byp_if0_cache[BYP_IF0_SLOTS];
+global i32 byp_if0_cache_next;
+
+function void
+byp_if0_push(Byp_If0_Cache *slot, Range_i64 range){
+ if(slot->count == slot->cap){
+  Base_Allocator *allocator = get_base_allocator_system();
+  i32 new_cap = (slot->cap == 0 ? 64 : slot->cap*2);
+  Range_i64 *new_ranges = base_array(allocator, Range_i64, new_cap);
+  if(slot->count > 0){ block_copy(new_ranges, slot->ranges, slot->count*sizeof(Range_i64)); }
+  base_free(allocator, slot->ranges);
+  slot->ranges = new_ranges;
+  slot->cap = new_cap;
+ }
+ slot->ranges[slot->count++] = range;
+}
+
+// `#if 0` exactly: the condition is a lone `0` (a trailing comment is fine, `#if 0 || X` isn't)
+function b32
+byp_token_is_if0(Application_Links *app, Buffer_ID buffer, Token_Array *array, i64 if_index){
+ i64 j = if_index + 1;
+ while(j < array->count && array->tokens[j].kind == TokenBaseKind_Whitespace){ j += 1; }
+ if(j >= array->count){ return false; }
+ Token *zero = array->tokens + j;
+ if(zero->kind != TokenBaseKind_LiteralInteger || zero->size != 1 ||
+    buffer_get_char(app, buffer, zero->pos) != '0'){ return false; }
+ i64 k = j + 1;
+ while(k < array->count && array->tokens[k].kind == TokenBaseKind_Whitespace){ k += 1; }
+ if(k >= array->count){ return true; }
+ Token *next = array->tokens + k;
+ return(next->kind == TokenBaseKind_Comment || !HasFlag(next->flags, TokenBaseFlag_PreprocessorBody));
+}
+
+function Byp_If0_Cache*
+byp_if0_ranges(Application_Links *app, Buffer_ID buffer, Token_Array *array){
+ History_Record_Index history = buffer_history_get_current_state_index(app, buffer);
+ Byp_If0_Cache *slot = 0;
+ for(i32 i = 0; i < BYP_IF0_SLOTS; i += 1){
+  Byp_If0_Cache *c = byp_if0_cache + i;
+  if(c->buffer == buffer){
+   if(c->tokens == array->tokens && c->token_count == array->count && c->history == history){ return c; }
+   slot = c;
+   break;
+  }
+ }
+ if(slot == 0){
+  slot = byp_if0_cache + byp_if0_cache_next;
+  byp_if0_cache_next = (byp_if0_cache_next + 1) % BYP_IF0_SLOTS;
+ }
+ slot->buffer = buffer;
+ slot->tokens = array->tokens;
+ slot->token_count = array->count;
+ slot->history = history;
+ slot->count = 0;
+
+ // depth > 0 while inside a dead branch; nested #if/#ifdef inside it only count up/down
+ i32 depth = 0;
+ i64 start = 0;
+ for(i64 i = 0; i < array->count; i += 1){
+  Token *token = array->tokens + i;
+  if(token->kind != TokenBaseKind_Preprocessor){ continue; }
+  switch(token->sub_kind){
+   case TokenCppKind_PPIf: case TokenCppKind_PPIfDef: case TokenCppKind_PPIfNDef:{
+    if(depth > 0){ depth += 1; }
+    else if(token->sub_kind == TokenCppKind_PPIf && byp_token_is_if0(app, buffer, array, i)){
+     depth = 1;
+     start = token->pos + token->size;
+    }
+   }break;
+   case TokenCppKind_PPElse: case TokenCppKind_PPElIf:{
+    if(depth == 1){ byp_if0_push(slot, Ii64(start, token->pos)); depth = 0; }
+   }break;
+   case TokenCppKind_PPEndIf:{
+    if(depth == 1){ byp_if0_push(slot, Ii64(start, token->pos)); depth = 0; }
+    else if(depth > 1){ depth -= 1; }
+   }break;
+  }
+ }
+ // unterminated `#if 0`: dead to the end of the buffer
+ if(depth > 0 && array->count > 0){
+  Token *last = array->tokens + array->count - 1;
+  byp_if0_push(slot, Ii64(start, last->pos + last->size));
+ }
+ return slot;
+}
+
  function void byp_draw_token_colors(Application_Links *app, View_ID view, Buffer_ID buffer, Text_Layout_ID text_layout_id){
  Token_Array token_array = get_token_array_from_buffer(app, buffer);
  Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
@@ -117,14 +218,19 @@ byp_highlight_token(Token_Base_Kind kind){
  }
  }
 
- // NOTE(allen): Scan for TODOs and NOTEs
- b32 use_comment_keyword = def_get_config_b32(vars_save_string_lit("use_comment_keyword"));
- if(use_comment_keyword){
- Comment_Highlight_Pair pairs[] = {
- {string_u8_litexpr("NOTE"), finalize_color(defcolor_comment_pop, 0)},
- {string_u8_litexpr("TODO"), finalize_color(defcolor_comment_pop, 1)},
- };
- draw_comment_highlights(app, buffer, text_layout_id, &token_array, pairs, ArrayCount(pairs));
+ // NOTE(nasr): comment keywords (NOTE/TODO/...) are painted by byp_draw_comments, which runs
+ // right after this with a superset of the keywords; doing NOTE/TODO here too scanned every
+ // visible comment twice per frame
+
+ // dead `#if 0` branches (C family only: other lexers reuse the sub_kind numbers)
+ Byp_If0_Cache *if0 = 0;
+ i32 if0_index = 0;
+ {
+ Nasr_Language lang = nasr_buffer_language(app, buffer);
+ if((lang == NasrLang_C || lang == NasrLang_Cpp || lang == NasrLang_CHeader) && token_array.tokens != 0){
+ if0 = byp_if0_ranges(app, buffer, &token_array);
+ if(if0->count == 0){ if0 = 0; }
+ }
  }
 
  it = token_iterator_pos(0, &token_array, Max(0, visible_range.first-1));
@@ -148,6 +254,14 @@ byp_highlight_token(Token_Base_Kind kind){
  case CodeIndexNote_Macro:    argb = cl_macro;  break;
  case CodeIndexNote_Enum:     argb = cl_enum;   break;
  case CodeIndexNote_Global:   argb = cl_global; break;
+ }
+ }
+
+ // ranges are sorted and tokens come in order, so the index only moves forward
+ if(if0 != 0){
+ while(if0_index < if0->count && if0->ranges[if0_index].max <= token->pos){ if0_index += 1; }
+ if(if0_index < if0->count && if0->ranges[if0_index].min <= token->pos){
+ argb = argb_color_blend(argb, 0.6f, cl_back);
  }
  }
 

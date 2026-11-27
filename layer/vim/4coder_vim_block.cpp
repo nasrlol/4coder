@@ -39,6 +39,21 @@ vim_get_rel_block_rect(Application_Links *app, View_ID view, Buffer_ID buffer, R
  return rect_union(min_rect, max_rect);
  }
 
+ // NOTE(nasr): the part of `line` covered by the block. An x past the end of a line resolves to
+ // that line's newline (it has a layout item), so a blank line, or one that ends before the
+ // block, used to yield "\n" and add an extra row to the register -> clamp to the line end
+ function Range_i64
+ vim_block_line_range(Application_Links *app, View_ID view, Buffer_ID buffer, i64 line_min,
+                      Rect_f32 block_rect, f32 line_advance, f32 wid, i64 line){
+ Vec2_f32 min_point = block_rect.p0 + V2f32(0, line_advance*(line-line_min));
+ Vec2_f32 max_point = min_point + V2f32(wid,0);
+ i64 min_pos = view_pos_at_relative_xy(app, view, line_min, min_point);
+ i64 max_pos = view_pos_at_relative_xy(app, view, line_min, max_point)+1;
+ i64 line_end = get_line_end_pos(app, buffer, line);
+ if(min_pos >= line_end){ return Ii64(line_end); }
+ return Ii64(min_pos, Min(max_pos, line_end));
+ }
+
  function void
  vim_block_copy(Application_Links *app, View_ID view, Buffer_ID buffer, Range_i64 range, Vim_Register *reg){
  if(reg->flags & REGISTER_ReadOnly){
@@ -59,11 +74,8 @@ vim_get_rel_block_rect(Application_Links *app, View_ID view, Buffer_ID buffer, R
 
  u64 size = 0;
  for(i64 i=line_max; i>=line_min; i--){
- Vec2_f32 min_point = block_rect.p0 + V2f32(0, line_advance*(i-line_min));
- Vec2_f32 max_point = min_point + V2f32(wid,0);
- i64 min_pos = view_pos_at_relative_xy(app, view, line_min, min_point);
- i64 max_pos = view_pos_at_relative_xy(app, view, line_min, max_point)+1;
- size += (max_pos - min_pos) + 1;
+ Range_i64 line_range = vim_block_line_range(app, view, buffer, line_min, block_rect, line_advance, wid, i);
+ size += range_size(line_range) + 1;
  }
 
  b32 valid = true;
@@ -73,15 +85,12 @@ vim_get_rel_block_rect(Application_Links *app, View_ID view, Buffer_ID buffer, R
 
  reg->data.size = 0;
  for(i64 i=line_max; i>=line_min; i--){
- Vec2_f32 min_point = block_rect.p0 + V2f32(0, line_advance*(i-line_min));
- Vec2_f32 max_point = min_point + V2f32(wid,0);
- i64 min_pos = view_pos_at_relative_xy(app, view, line_min, min_point);
- i64 max_pos = view_pos_at_relative_xy(app, view, line_min, max_point)+1;
-
- Range_i64 line_range = Ii64(min_pos, max_pos);
+ Range_i64 line_range = vim_block_line_range(app, view, buffer, line_min, block_rect, line_advance, wid, i);
+ if(range_size(line_range) > 0){
  buffer_read_range(app, buffer, line_range, reg->data.str + reg->data.size);
  buffer_post_fade(app, buffer, 0.667f, line_range, fcolor_resolve(fcolor_id(defcolor_paste)));
- reg->data.size += (max_pos - min_pos) + 1;
+ }
+ reg->data.size += range_size(line_range) + 1;
  reg->data.str[reg->data.size-1] = '\n';
  }
  }
@@ -92,37 +101,76 @@ vim_get_rel_block_rect(Application_Links *app, View_ID view, Buffer_ID buffer, R
 
  History_Group group = history_group_begin(app, buffer);
 
- i64 line_min = get_line_number_from_pos(app, buffer, cursor_pos);
- i64 line_max = line_min-1;
- foreach(i,reg->data.size){ line_max += reg->data.str[i] == '\n'; }
-
- // TODO(BYP): Still doesn't handle empty lines gracefully
- Range_i64 range = Ii64(cursor_pos, buffer_compute_cursor(app, buffer, seek_line_col(line_max, 0)).pos);
- Rect_f32 block_rect = vim_get_rel_block_rect(app, view, buffer, range, line_min);
-
- //f32 line_advance = get_face_metrics(app, get_face_id(app, buffer)).line_height - 0.01f;
- f32 line_advance = rect_height(block_rect)/f32(Max(1, line_max-line_min));
- f32 wid = rect_width(block_rect);
-
- Range_i64 substring = {};
- substring.max = -1;
- for(i64 i=line_max; i>=line_min; i--){
- Vec2_f32 point = block_rect.p0 + V2f32(wid, line_advance*(i-line_min));
- i64 pos = view_pos_at_relative_xy(app, view, line_min, point);
-
- b32 valid=true;
- substring.min = substring.max + 1;
- while(reg->data.str[++substring.max] != '\n'){
- if(substring.max >= i64(reg->data.size)){ valid=false; break; }
+ // NOTE(nasr): one register row per '\n'; rows are stored bottom-up (row 0 = last line)
+ u8 *data = reg->data.str;
+ u64 data_size = reg->data.size;
+ i64 row_count = 0;
+ u64 row_width = 0;
+ {
+ u64 cur = 0;
+ foreach(i, data_size){
+ if(data[i] == '\n'){ row_count += 1; row_width = Max(row_width, cur); cur = 0; }
+ else{ cur += 1; }
  }
- if(!valid){ break; }
+ }
 
- Range_i64 sub = substring;
- //sub.max += (line_is_valid_and_blank(app, buffer, i));
- //pos -= (line_is_valid_and_blank(app, buffer, i));
- buffer_replace_range(app, buffer, Ii64(pos), string_substring(reg->data.string, sub));
+ i64 line_min = get_line_number_from_pos(app, buffer, cursor_pos);
+ i64 line_max = line_min + row_count - 1;
+
+ Scratch_Block scratch(app);
+
+ // block taller than what's left of the buffer -> add lines at the end
+ i64 line_count = buffer_get_line_count(app, buffer);
+ if(row_count > 0 && line_max > line_count){
+ i64 extra = line_max - line_count;
+ u8 *newlines = push_array(scratch, u8, extra);
+ for(i64 i = 0; i < extra; i += 1){ newlines[i] = '\n'; }
+ buffer_replace_range(app, buffer, Ii64(buffer_get_size(app, buffer)), SCu8(newlines, extra));
+ }
+
+ f32 x = view_relative_xy_of_pos(app, view, line_min, cursor_pos).x;
+ f32 space = get_face_metrics(app, get_face_id(app, buffer)).space_advance;
+ if(space < 1.f){ space = 1.f; }
  ARGB_Color argb = fcolor_resolve(fcolor_id(defcolor_paste));
- buffer_post_fade(app, buffer, 0.667f, Ii64_size(pos, range_size(sub)), argb);
+
+ u64 row_start = 0;
+ for(i64 i=line_max; i>=line_min && row_start < data_size; i--){
+ u64 row_end = row_start;
+ while(row_end < data_size && data[row_end] != '\n'){ row_end += 1; }
+ String_Const_u8 row = SCu8(data + row_start, row_end - row_start);
+ row_start = row_end + 1;
+
+ // an x past the end of the line resolves to its newline, so short and blank lines land at
+ // the line end; pad those out to the block column with spaces
+ i64 line_start = get_line_start_pos(app, buffer, i);
+ i64 line_end = get_line_end_pos(app, buffer, i);
+ f32 y = view_relative_xy_of_pos(app, view, line_min, line_start).y;
+ i64 pos = view_pos_at_relative_xy(app, view, line_min, V2f32(x, y));
+ pos = Max(line_start, Min(pos, line_end));
+
+ u64 pad_before = 0;
+ u64 pad_after = 0;
+ if(pos == line_end){
+ if(row.size == 0){ continue; }
+ f32 end_x = view_relative_xy_of_pos(app, view, line_min, line_end).x;
+ if(x > end_x){ pad_before = u64((x - end_x)/space + 0.5f); }
+ }else{
+ // text continues to the right: keep it aligned by padding short rows to the block width
+ pad_after = row_width - row.size;
+ }
+
+ String_Const_u8 text = row;
+ if(pad_before > 0 || pad_after > 0){
+ u64 size = pad_before + row.size + pad_after;
+ u8 *str = push_array(scratch, u8, size);
+ for(u64 j = 0; j < pad_before; j += 1){ str[j] = ' '; }
+ block_copy(str + pad_before, row.str, row.size);
+ for(u64 j = pad_before + row.size; j < size; j += 1){ str[j] = ' '; }
+ text = SCu8(str, size);
+ }
+
+ buffer_replace_range(app, buffer, Ii64(pos), text);
+ buffer_post_fade(app, buffer, 0.667f, Ii64_size(pos, text.size), argb);
  }
 
  history_group_end(group);

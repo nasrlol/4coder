@@ -26,7 +26,7 @@ vim_update_registers(Application_Links *app){
  if(reg->flags & REGISTER_Set){
  u8 reg_char = vim_get_register_char(reg);
  i64 size = Min(i64(reg->data.size), max_line_size);
- size -= (reg->data.str[size-1] == '\n');
+ if(size > 0){ size -= (reg->data.str[size-1] == '\n'); }
 
  last = (last->next = push_array(scratch, Batch_Edit, 1));
  u8 *str = push_array(scratch, u8, 4);

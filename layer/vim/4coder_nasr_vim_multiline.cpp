@@ -97,7 +97,7 @@ nasr_vim_object_range(Application_Links *app, Buffer_ID buffer, i64 anchor,
  if(text_object){
   vim_state.params.clusivity = clusivity;
   Range_i64 r = text_object->func(app, buffer, anchor);
-  if((r.min != 0 || r.max != 0) && r.min <= r.max){
+  if(vim_object_found(r) && r.min <= r.max){
    range = Ii64(r.min, r.max + 1);
    valid = true;
   }
@@ -219,6 +219,8 @@ nasr_vim_spec_range_on_line(Application_Links *app, Buffer_ID buffer, Nasr_Vim_R
                             i64 line, i64 column, Nasr_Vim_Spec spec, Range_i64 *out){
  i64 line_start = get_line_start_pos(app, buffer, line);
  i64 line_end = get_line_end_pos(app, buffer, line);
+ // NOTE(nasr): CRLF: the '\r' is part of the line ending, not text
+ if(line_end > line_start && buffer_get_char(app, buffer, line_end - 1) == '\r'){ line_end -= 1; }
 
  switch(spec.kind){
   case 'i': case 'a':{
@@ -330,7 +332,9 @@ nasr_vim_collect(Application_Links *app, Arena *arena, View_ID view, Buffer_ID b
   lines = push_array(arena, i64, cap);
   b32 found_cursor = false;
   for(u64 i = 0; i + needle.size <= text.size;){
-   if(string_match(SCu8(text.str + i, needle.size), needle) &&
+   String_Const_u8 here = SCu8(text.str + i, needle.size);
+   // NOTE(nasr): `n` follows `/`, which searches case-insensitively; `*` stays exact
+   if((whole_word ? string_match(here, needle) : string_match_insensitive(here, needle)) &&
       (!whole_word ||
        ((i == 0 || !nasr_vim_is_word_char(text.str[i - 1])) &&
         (i + needle.size == text.size || !nasr_vim_is_word_char(text.str[i + needle.size]))))){
@@ -619,7 +623,7 @@ VIM_COMMAND_SIG(nasr_vim_modal_r){
 VIM_TEXT_OBJECT_SIG(nasr_vim_object_mark){
  View_ID view = get_active_view(app, Access_ReadVisible);
  i64 mark_pos = view_get_mark_pos(app, view);
- Range_i64 range = {};
+ Range_i64 range = vim_object_not_found(); // `im` with cursor == mark is empty
  if(vim_state.params.clusivity == VIM_Exclusive){
   Range_i64 r = Ii64(cursor_pos, mark_pos);
   if(r.max > r.min){ range = Ii64(r.min, r.max - 1); }
@@ -851,7 +855,8 @@ nasr_vim_align_query(Application_Links *app, Arena *arena, String_Const_u8 *out,
   for(;;){
    vim_set_bottom_text(prefix);
    string_append(&vim_bot_text, query.string);
-   animate_in_n_milliseconds(app, 0);
+   // NOTE(nasr): no per-pass animate request: it fed an Animate event back into this loop
+   // and kept the prompt redrawing at 60fps while open
    User_Input in = get_next_input(app, EventPropertyGroup_Any, EventProperty_Escape);
    if(in.abort){ break; }
    if(match_key_code(&in, KeyCode_Return)){

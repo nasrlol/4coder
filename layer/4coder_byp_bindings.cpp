@@ -15,15 +15,15 @@ byp_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id)
     SelectMapping(mapping);
 
     SelectMap(global_id);
-    BindCore(byp_startup, CoreCode_Startup);
-    BindCore(byp_try_exit, CoreCode_TryExit);
+    BindCore(startup, CoreCode_Startup);
+    BindCore(try_exit, CoreCode_TryExit);
     BindCore(clipboard_record_clip, CoreCode_NewClipboardContents);
     BindMouseWheel(mouse_wheel_scroll);
     BindMouseWheel(mouse_wheel_change_face_size, KeyCode_Control);
 
     SelectMap(file_id);
     ParentMap(global_id);
-    BindTextInput(byp_write_text_input);
+    BindTextInput(write_text_input);
     BindMouse(click_set_cursor_and_mark, MouseCode_Left);
     BindMouseRelease(click_set_cursor, MouseCode_Left);
     BindCore(click_set_cursor_and_mark, CoreCode_ClickActivateView);
@@ -71,15 +71,15 @@ byp_vim_bindings(Application_Links *app){
     VimBind(N|MAP, tab_new,                                      SUB_Leader, KeyCode_N);
     VimBind(N|MAP, tab_close,                                    SUB_Leader, KeyCode_W);
 
-    VimBind(N|V|MAP, byp_open_current_peek,                      (Alt|KeyCode_Return));
+    VimBind(N|V|MAP, open_peek_in_view,                      (Alt|KeyCode_Return));
 
-    VimBind(N|V|MAP, byp_find_divider_up,                        (Ctl|Sft|KeyCode_LeftBracket));
-    VimBind(N|V|MAP, byp_find_divider_down,                      (Ctl|Sft|KeyCode_RightBracket));
+    VimBind(N|V|MAP, find_divider_up,                        (Ctl|Sft|KeyCode_LeftBracket));
+    VimBind(N|V|MAP, find_divider_down,                      (Ctl|Sft|KeyCode_RightBracket));
 
-    VimBind(N|V|MAP, byp_request_title,                          SUB_Leader, (Sft|KeyCode_U));
+    VimBind(N|V|MAP, vim_title_case,                          SUB_Leader, (Sft|KeyCode_U));
 
-    VimBind(I|MAP, byp_auto_complete_bracket,                    KeyCode_Return);
-    VimBind(I|MAP, byp_auto_complete_bracket,                    (Sft|KeyCode_Return));
+    VimBind(I|MAP, newline_auto_close_brace,                    KeyCode_Return);
+    VimBind(I|MAP, newline_auto_close_brace,                    (Sft|KeyCode_Return));
 
     VimBind(N|MAP, vim_interactive_open_or_new,                  (Alt|Sft|KeyCode_O));
     VimBind(N|MAP, interactive_open_or_new,                      (Alt|KeyCode_O));
@@ -87,7 +87,7 @@ byp_vim_bindings(Application_Links *app){
     VimBind(N|MAP, interactive_kill_buffer,                      SUB_Leader, KeyCode_Q);
     VimBind(N|MAP, load_project,                                 (Alt|KeyCode_A));
 
-    VimBind(N|MAP, nasr_goto,                                    (Ctl|KeyCode_W));
+    VimBind(N|MAP, nasr_goto,                                    SUB_G, KeyCode_D);
     VimBind(N|MAP, nasr_vim_modal_r,                             KeyCode_R);
 
     //- region editing (cursor <-> mark), see vim/4coder_nasr_vim_multiline.cpp
@@ -137,7 +137,7 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
     Bind(project_go_to_root_directory,  KeyCode_H, KeyCode_Control);
     Bind(save_all_dirty_buffers,        KeyCode_S, KeyCode_Control, KeyCode_Shift);
 
-    Bind(byp_build_project,             KeyCode_B, KeyCode_Alt);
+    Bind(build_project,             KeyCode_B, KeyCode_Alt);
     Bind(build_in_build_panel,          KeyCode_M, KeyCode_Alt);
     Bind(close_build_panel,             KeyCode_M, KeyCode_Control);
 
@@ -146,29 +146,29 @@ byp_default_bindings(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id){
     Bind(quick_swap_buffer,             KeyCode_Tab, KeyCode_Control);
     Bind(exit_4coder,                   KeyCode_F4, KeyCode_Alt);
 
-    Bind(byp_project_fkey_command, KeyCode_F1);
-    Bind(byp_project_fkey_command, KeyCode_F2);
-    Bind(byp_project_fkey_command, KeyCode_F3);
-    Bind(byp_project_fkey_command, KeyCode_F4);
-    Bind(byp_project_fkey_command, KeyCode_F5);
-    Bind(byp_project_fkey_command, KeyCode_F6);
-    Bind(byp_project_fkey_command, KeyCode_F7);
-    Bind(byp_project_fkey_command, KeyCode_F8);
-    Bind(byp_project_fkey_command, KeyCode_F9);
-    Bind(byp_project_fkey_command, KeyCode_F10);
-    Bind(byp_project_fkey_command, KeyCode_F12);
-    Bind(byp_project_fkey_command, KeyCode_F13);
-    Bind(byp_project_fkey_command, KeyCode_F14);
-    Bind(byp_project_fkey_command, KeyCode_F15);
-    Bind(byp_project_fkey_command, KeyCode_F16);
+    Bind(project_fkey_command, KeyCode_F1);
+    Bind(project_fkey_command, KeyCode_F2);
+    Bind(project_fkey_command, KeyCode_F3);
+    Bind(project_fkey_command, KeyCode_F4);
+    Bind(project_fkey_command, KeyCode_F5);
+    Bind(project_fkey_command, KeyCode_F6);
+    Bind(project_fkey_command, KeyCode_F7);
+    Bind(project_fkey_command, KeyCode_F8);
+    Bind(project_fkey_command, KeyCode_F9);
+    Bind(project_fkey_command, KeyCode_F10);
+    Bind(project_fkey_command, KeyCode_F12);
+    Bind(project_fkey_command, KeyCode_F13);
+    Bind(project_fkey_command, KeyCode_F14);
+    Bind(project_fkey_command, KeyCode_F15);
+    Bind(project_fkey_command, KeyCode_F16);
 
     Bind(toggle_fullscreen, KeyCode_F11);
 
     Bind(increase_face_size,                            KeyCode_Equal, KeyCode_Control);
     Bind(decrease_face_size,                            KeyCode_Minus, KeyCode_Control);
-    Bind(byp_reset_face_size,                           KeyCode_0, KeyCode_Control);
+    Bind(reset_face_size,                           KeyCode_0, KeyCode_Control);
     Bind(vim_proj_cmd_lister,                           KeyCode_X, KeyCode_Alt, KeyCode_Shift);
-    Bind(byp_toggle_set_col_ruler,                      KeyCode_BackwardSlash, KeyCode_Control, KeyCode_Shift);
+    Bind(toggle_column_ruler,                      KeyCode_BackwardSlash, KeyCode_Control, KeyCode_Shift);
 
     Bind(toggle_virtual_whitespace,                     KeyCode_0, KeyCode_Control, KeyCode_Shift);
 

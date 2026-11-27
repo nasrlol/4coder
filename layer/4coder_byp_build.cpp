@@ -151,7 +151,7 @@ byp_build_view_spin(Application_Links *app){
   }
 
 
-  CUSTOM_COMMAND_SIG(byp_project_fkey_command)
+  CUSTOM_COMMAND_SIG(project_fkey_command)
   CUSTOM_DOC("Runs project commands but uses proper footer build panel")
   {
   ProfileScope(app, "project fkey command");
@@ -177,7 +177,7 @@ byp_build_view_spin(Application_Links *app){
   }
   }
 
-  CUSTOM_COMMAND_SIG(byp_build_project)
+  CUSTOM_COMMAND_SIG(build_project)
   CUSTOM_DOC("Compiles project")
   {
   format_all_buffers(app);
@@ -204,6 +204,6 @@ CUSTOM_COMMAND_SIG(nasr_build_project_or_search)
 CUSTOM_DOC("Runs the project's F1 command, or searches for a build script")
 {
   if(!byp_prj_exec_command_fkey_index(app, 0)){
-    byp_build_project(app);
+    build_project(app);
   }
 }

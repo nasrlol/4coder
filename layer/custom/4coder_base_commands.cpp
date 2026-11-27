@@ -56,13 +56,8 @@ write_text(Application_Links *app, String_Const_u8 insert){
   }
   }
 
-  CUSTOM_COMMAND_SIG(write_text_input)
-  CUSTOM_DOC("Inserts whatever text was used to trigger this command.")
-  {
-  User_Input in = get_current_input(app);
-  String_Const_u8 insert = to_writable(&in);
-  write_text(app, insert);
-  }
+  // NOTE(nasr): write_text_input is defined in the nasr layer (4coder_byp_commands.cpp), which
+  // also tracks a just-typed `{` for newline_auto_close_brace; forward declared in 4coder_byp.cpp
 
   CUSTOM_COMMAND_SIG(write_space)
   CUSTOM_DOC("Inserts a space.")

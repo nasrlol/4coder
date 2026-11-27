@@ -42,6 +42,7 @@ CUSTOM_DOC("Toggles buffer peek")
   Face_Metrics metrics = get_face_metrics(app, face_id);
   f32 line_height = metrics.line_height;
   i64 total_lines = buffer_get_line_count(app, buffer);
+  if(total_lines <= 0){ return; }
 
   Rect_f32 back_rect = vim_get_bottom_rect(app);
   f32 lines_per_page = rect_height(back_rect) / line_height;
@@ -111,7 +112,9 @@ CUSTOM_DOC("Toggles buffer peek")
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
   // NOTE(nasr): `a` appends on the current line -- never step past the line ending
   i64 pos = view_get_cursor_pos(app, view);
-  i64 line_end = get_line_end_pos(app, buffer, get_line_number_from_pos(app, buffer, pos));
+  i64 line_num = get_line_number_from_pos(app, buffer, pos);
+  i64 line_end = get_line_end_pos(app, buffer, line_num);
+  if(line_end > get_line_start_pos(app, buffer, line_num) && buffer_get_char(app, buffer, line_end - 1) == '\r'){ line_end -= 1; }
   if(pos < line_end){
   move_right(app);
   }
@@ -182,7 +185,7 @@ CUSTOM_DOC("Toggles buffer peek")
   Managed_Scope scope = buffer_get_managed_scope(app, buffer);
 
   Vim_Prev_Visual *prev_visual = scope_attachment(app, scope, vim_buffer_prev_visual, Vim_Prev_Visual);
-  if(prev_visual && prev_visual->cursor_pos != 0 && prev_visual->mark_pos != 0){
+  if(prev_visual && prev_visual->valid){
   view_set_cursor_and_preferred_x(app, view, seek_pos(prev_visual->cursor_pos));
   view_set_mark(app, view, seek_pos(prev_visual->mark_pos));
   vim_state.params.edit_type = prev_visual->edit_type;
@@ -243,12 +246,20 @@ CUSTOM_DOC("Toggles buffer peek")
   VIM_COMMAND_SIG(vim_submode_z){ vim_state.sub_mode = SUB_Z; vim_state.chord_resolved = false; }
   VIM_COMMAND_SIG(vim_submode_leader){ vim_state.sub_mode = SUB_Leader; vim_state.chord_resolved = false; }
 
+  // NOTE(nasr): true when pos sits on the line ending (or past the buffer end): r/~ leave it alone
+  function b32 vim_pos_is_line_end(Application_Links *app, Buffer_ID buffer, i64 pos){
+  if(pos >= buffer_get_size(app, buffer)){ return true; }
+  u8 c = buffer_get_char(app, buffer, pos);
+  return (c == '\n' || c == '\r');
+  }
+
   VIM_COMMAND_SIG(vim_replace_next_char){
   u8 key = vim_query_user_key(app, string_u8_litexpr("-- REPLACE NEXT --"));
   if(key){
   View_ID view = get_active_view(app, Access_ReadVisible);
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
   i64 pos = view_get_cursor_pos(app, view);
+  if(vim_pos_is_line_end(app, buffer, pos)){ return; }
   buffer_replace_range(app, buffer, Ii64(pos, pos+1), SCu8(&key, 1));
   }
   }
@@ -277,8 +288,11 @@ CUSTOM_DOC("Toggles buffer peek")
   View_ID view = get_active_view(app, Access_ReadVisible);
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
   i64 pos = view_get_cursor_pos(app, view);
+  if(vim_pos_is_line_end(app, buffer, pos)){ return; }
   u8 c = buffer_get_char(app, buffer, pos);
-  c = character_toggle_case(c);
+  u8 t = character_toggle_case(c);
+  if(t == c){ return; }
+  c = t;
   buffer_replace_range(app, buffer, Ii64_size(pos, 1), SCu8(&c, 1));
   }
 
@@ -523,21 +537,29 @@ CUSTOM_DOC("Toggles buffer peek")
   }
 
   // NOTE: This intentionally doesn't update selected register
+  // NOTE(nasr): x/X delete [count] chars, never past the line bounds (no line joins)
   function void vim_backspace_char_inner(Application_Links *app, i32 offset){
   View_ID view = get_active_view(app, Access_ReadWriteVisible);
   if(!if_view_has_highlighted_range_delete_range(app, view)){
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
   i64 pos = view_get_cursor_pos(app, view);
   i64 buffer_size = buffer_get_size(app, buffer);
-  if(in_range(0, pos, buffer_size)){
+  i32 N = vim_consume_number();
+  if(in_range(0, pos, buffer_size + 1)){
   Buffer_Cursor cursor = view_compute_cursor(app, view, seek_pos(pos));
+  i64 line_start = get_line_start_pos(app, buffer, cursor.line);
+  i64 line_end = get_line_end_pos(app, buffer, cursor.line);
+  if(line_end > line_start && buffer_get_char(app, buffer, line_end - 1) == '\r'){ line_end--; }
   i64 character = view_relative_character_from_pos(app, view, cursor.line, cursor.pos);
-  i64 start = view_pos_from_relative_character(app, view, cursor.line, character + offset);
-  u8 c = buffer_get_char(app, buffer, start);
-  vim_register_copy(&vim_registers.small_delete, SCu8(&c, 1));
+  i64 other = view_pos_from_relative_character(app, view, cursor.line, character + i64(offset)*N);
+  Range_i64 range = Ii64(clamp(line_start, other, line_end), clamp(line_start, pos, line_end));
+  if(range_size(range) > 0){
+  Scratch_Block scratch(app);
+  vim_register_copy(&vim_registers.small_delete, push_buffer_range(app, scratch, buffer, range));
   vim_registers.small_delete.edit_type = EDIT_CharWise;
   vim_update_registers(app);
-  buffer_replace_range(app, buffer, Ii64(start, pos), string_u8_empty);
+  buffer_replace_range(app, buffer, range, string_u8_empty);
+  }
   }
   }
   }
@@ -581,6 +603,8 @@ CUSTOM_DOC("Toggles buffer peek")
   i64 pos = get_line_end_pos(app, buffer, line_num);
   Range_i64 range = {};
   range.min = pos;
+  // NOTE(nasr): CRLF: drop the '\r' with the '\n' so it doesn't end up mid-line
+  if(pos > 0 && buffer_get_char(app, buffer, pos - 1) == '\r'){ range.min = pos - 1; }
 
   i64 new_pos = pos + 1;
   String_Const_u8 delimiter = (vim_state.sub_mode == SUB_G ? string_u8_empty : string_u8_litexpr(" "));
@@ -610,7 +634,8 @@ CUSTOM_DOC("Toggles buffer peek")
   i64 pos = view_get_cursor_pos(app, view);
   i64 line = buffer_compute_cursor(app, buffer, seek_pos(pos)).line;
 
-  i32 N = vim_consume_number();
+  // NOTE(nasr): [count]J joins count lines (count-1 joins), like vim; J and 2J both do one
+  i32 N = Max(1, vim_consume_number() - 1);
   if(vim_state.mode == VIM_Visual){
   Range_i64 range = get_view_range(app, view);
   i64 line_min = get_line_number_from_pos(app, buffer, range.min);
@@ -638,10 +663,9 @@ CUSTOM_DOC("Toggles buffer peek")
   Scratch_Block scratch(app);
   u8 character = vim_query_user_key(app, string_u8_litexpr("-- SET MARK NEXT --"));
   if(in_range('a', character, 'z'+1)){
-  Managed_Scope scope = buffer_get_managed_scope(app, buffer);
-  i64 *marks = (i64 *)managed_scope_get_attachment(app, scope, vim_buffer_marks, 26*sizeof(i64));
+  i64 *marks = vim_buffer_marks_get(app, buffer);
   if(marks){
-  marks[character-'a'] = pos;
+  marks[character-'a'] = pos + 1; // stored as pos+1, 0 = unset
   vim_set_bottom_text(push_stringf(scratch, "Mark %c set", character));
   }
   }
@@ -662,11 +686,11 @@ CUSTOM_DOC("Toggles buffer peek")
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
   u8 c = vim_query_user_key(app, string_u8_litexpr("-- GOTO MARK NEXT --"));
   if(in_range('a', c, 'z'+1)){
-  Managed_Scope scope = buffer_get_managed_scope(app, buffer);
-  i64 *marks = (i64 *)managed_scope_get_attachment(app, scope, vim_buffer_marks, 26*sizeof(i64));
+  i64 *marks = vim_buffer_marks_get(app, buffer);
   if(marks){
-  i64 pos = marks[c-'a'];
-  if(pos > 0){
+  // NOTE(nasr): stored as pos+1, 0 = unset (see vim_buffer_marks_get)
+  i64 pos = marks[c-'a'] - 1;
+  if(pos >= 0){
   vim_push_jump(app, view);
   Vim_Motion_Block vim_motion_block(app);
   view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
@@ -677,7 +701,6 @@ CUSTOM_DOC("Toggles buffer peek")
   }
   }
   else if(in_range('A', c, 'Z'+1)){
-  vim_push_jump(app, view);
   Vim_Global_Mark mark = vim_global_marks[c-'A'];
   if(mark.buffer_id.id){
   vim_push_jump(app, view);
@@ -709,7 +732,6 @@ CUSTOM_DOC("Toggles buffer peek")
 
 
   VIM_COMMAND_SIG(vim_open_file_in_quotes){
-  vim_push_jump(app, get_active_view(app, Access_ReadVisible));
   View_ID view = get_active_view(app, Access_ReadVisible);
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
   if(buffer_exists(app, buffer)){
@@ -717,9 +739,13 @@ CUSTOM_DOC("Toggles buffer peek")
 
   i64 pos = view_get_cursor_pos(app, view);
 
+  // NOTE(nasr): the quote scanner reads seek.character (consume_char was never used by it, so
+  // gf scanned for whatever char the last f/t used); nothing quoted -> do nothing
   vim_state.params.consume_char = '"';
+  vim_state.params.seek.character = '"';
   vim_state.params.clusivity = VIM_Inclusive;
   Range_i64 range = vim_scan_object_quotes(app, buffer, pos);
+  if(!vim_object_found(range)){ return; }
   range.min++;
   String_Const_u8 quoted_name = push_buffer_range(app, scratch, buffer, range);
 
@@ -757,11 +783,13 @@ CUSTOM_DOC("Toggles buffer peek")
   goto_first_jump(app);
   }
 
+  // NOTE(nasr): rotates the selected lines with the N lines next to them inside one block and
+  // swaps them around the line ending between the two parts, so a last line without a trailing newline never
+  // gets glued onto another line. one replace -> one history entry.
   function void vim_move_selection(Application_Links *app, Scan_Direction direction){
   View_ID view = get_active_view(app, Access_ReadWriteVisible);
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
   i64 max_line = buffer_get_line_count(app, buffer);
-  i64 max_pos = buffer_get_size(app, buffer);
   i64 N = vim_consume_number();
   b32 forward = direction == Scan_Forward;
 
@@ -771,28 +799,27 @@ CUSTOM_DOC("Toggles buffer peek")
   i64 line0 = get_line_number_from_pos(app, buffer, range.min);
   i64 line1 = get_line_number_from_pos(app, buffer, range.max);
   if(!forward ? line0 <= 1 : max_line <= line1){ return; }
+  N = (forward ? Min(N, max_line - line1) : Min(N, line0 - 1));
+  if(N <= 0){ return; }
 
-  Range_i64 copy_range = range_union(get_line_pos_range(app, buffer, line0),
-  get_line_pos_range(app, buffer, line1));
-  copy_range.max += buffer_get_char(app, buffer, copy_range.max) == '\r';
-  copy_range.max += 1;
-
-  i64 paste_pos = (forward ?
-  get_line_pos_range(app, buffer, line1 + N).max + 1 :
-  get_line_pos_range(app, buffer, line0 - N).min);
-  paste_pos = Min(paste_pos, max_pos);
+  Range_i64 moved = Ii64(get_line_start_pos(app, buffer, line0), get_line_end_pos(app, buffer, line1));
+  Range_i64 other = (forward ?
+  Ii64(get_line_start_pos(app, buffer, line1 + 1), get_line_end_pos(app, buffer, line1 + N)) :
+  Ii64(get_line_start_pos(app, buffer, line0 - N), get_line_end_pos(app, buffer, line0 - 1)));
+  Range_i64 block = range_union(moved, other);
 
   Scratch_Block scratch(app);
-  String_Const_u8 copy_string = push_buffer_range(app, scratch, buffer, copy_range);
+  String_Const_u8 moved_text = push_buffer_range(app, scratch, buffer, moved);
+  String_Const_u8 other_text = push_buffer_range(app, scratch, buffer, other);
+  // NOTE(nasr): the line ending between the two parts ("\n" or "\r\n"), reused as the separator
+  String_Const_u8 sep = push_buffer_range(app, scratch, buffer, (forward ? Ii64(moved.max, other.min) : Ii64(other.max, moved.min)));
+  String_Const_u8 text = (forward ?
+  push_u8_stringf(scratch, "%.*s%.*s%.*s", string_expand(other_text), string_expand(sep), string_expand(moved_text)) :
+  push_u8_stringf(scratch, "%.*s%.*s%.*s", string_expand(moved_text), string_expand(sep), string_expand(other_text)));
+
+  i64 offset = i64(other_text.size + sep.size)*(forward ? 1 : -1);
   History_Group group = history_group_begin(app, buffer);
-  if(forward){
-  buffer_replace_range(app, buffer, Ii64(paste_pos), copy_string);
-  buffer_replace_range(app, buffer, copy_range, string_u8_empty);
-  }else{
-  buffer_replace_range(app, buffer, copy_range, string_u8_empty);
-  buffer_replace_range(app, buffer, Ii64(paste_pos), copy_string);
-  }
-  i64 offset = paste_pos - (forward ? copy_range.max : copy_range.min);
+  buffer_replace_range(app, buffer, block, text);
   view_set_cursor(app, view, seek_pos(cursor_pos + offset));
   view_set_mark(app, view, seek_pos(mark_pos + offset));
   history_group_end(group);
@@ -877,7 +904,7 @@ CUSTOM_COMMAND_SIG(e)
 CUSTOM_DOC("Vim: Open file") { vim_interactive_open_or_new(app); }
 
 CUSTOM_COMMAND_SIG(b)
-CUSTOM_DOC("Vim: Open file") { vim_interactive_open_or_new(app); }
+CUSTOM_DOC("Vim: Switch buffer") { vim_switch_lister(app); }
 
 CUSTOM_COMMAND_SIG(vs)
 CUSTOM_DOC("Vim: Vertical split") { open_panel_vsplit(app); }

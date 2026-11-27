@@ -55,6 +55,7 @@ function i64 vim_pattern_inner_v(Application_Links *app, Buffer_Seek_String_Flag
 
  Scan_Direction direction = start_direction;
  i64 pos = view_get_cursor_pos(app, view);
+ i64 start_pos = pos;
 
  /// TODO(BYP): Need a better system to have multiple types of these drawing
  vim_use_bottom_cursor = true;
@@ -65,8 +66,13 @@ function i64 vim_pattern_inner_v(Application_Links *app, Buffer_Seek_String_Flag
  base_size = after_size = vim_bot_text.size;
 
  Vim_Register *reg = &vim_registers.search;
- if(reg->data.size < 256){ vim_realloc_string(&reg->data, 0); }
+ // NOTE(nasr): the search register doubles as the query buffer; keep the previous pattern so
+ // Esc can put it back instead of losing it
+ Scratch_Block prev_scratch(app);
+ String_Const_u8 prev_pattern = push_string_copy(prev_scratch, reg->data.string);
+ Vim_Register_Flags prev_flags = reg->flags;
  reg->data.size = 0;
+ if(reg->data.cap < 256){ vim_realloc_string(&reg->data, 256); }
  String_u8 *query = &reg->data;
 
  f32 prev_offset = vim_nxt_filebar_offset;
@@ -74,14 +80,24 @@ function i64 vim_pattern_inner_v(Application_Links *app, Buffer_Seek_String_Flag
  i64 match_size = 0;
  User_Input in = {};
  for(;;){
+ // NOTE(nasr): the filebar slide animates itself from the tick; requesting a frame on every
+ // pass here made the prompt redraw at 60fps for as long as it was open
  if(vim_nxt_filebar_offset == 0.f){ vim_nxt_filebar_offset = 0.1f; }
- animate_in_n_milliseconds(app, 0);
  vim_set_bottom_text(prefix);
- block_copy(dest, query->str, query->size);
- vim_bot_text.size = after_size + query->size;
+ u64 shown = Min(query->size, vim_bot_text.cap - after_size);
+ block_copy(dest, query->str, shown);
+ vim_bot_text.size = after_size + shown;
 
  in = get_next_input(app, EventPropertyGroup_Any, EventProperty_Escape);
- if(in.abort){ query->size = 0; break; }
+ if(in.abort){
+ if(query->cap < prev_pattern.size){ vim_realloc_string(query, prev_pattern.size); }
+ block_copy(query->str, prev_pattern.str, prev_pattern.size);
+ query->size = prev_pattern.size;
+ reg->flags = prev_flags;
+ vim_update_registers(app);
+ view_set_cursor_and_preferred_x(app, view, seek_pos(start_pos));
+ break;
+ }
 
  String_Const_u8 string = to_writable(&in);
 
@@ -91,6 +107,9 @@ function i64 vim_pattern_inner_v(Application_Links *app, Buffer_Seek_String_Flag
  break;
  }
  else if(string.str != 0 && string.size > 0){
+ if(query->size + string.size > query->cap){
+ vim_realloc_string(query, query->size + string.size);
+ }
  string_append(query, string);
  string_change = true;
  }

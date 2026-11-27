@@ -393,7 +393,12 @@ VIM_COMMAND_SIG(vim_begin_line){
   return vim_bounce_pair(app, buffer, pos, track);
   }
 
-  VIM_TEXT_OBJECT_SIG(vim_object_none){ return Ii64(0,0); }
+  // NOTE(nasr): text objects return {-1,-1} for "not found". {0,0} used to mean that, which made a
+  // real one-char object at pos 0 indistinguishable from a miss.
+  function Range_i64 vim_object_not_found(void){ Range_i64 r; r.min = -1; r.max = -1; return r; }
+  function b32 vim_object_found(Range_i64 r){ return r.min >= 0; }
+
+  VIM_TEXT_OBJECT_SIG(vim_object_none){ return vim_object_not_found(); }
 
   VIM_TEXT_OBJECT_SIG(vim_object_para){
   Range_i64 range = {};
@@ -452,8 +457,10 @@ VIM_COMMAND_SIG(vim_begin_line){
 
   // NOTE(BYP): Default vim behavior for Around includes leading whitespace before quote objects
   // I have chosen to ignore this, since it's both easier, and aligns better with expectation
+  // NOTE(nasr): returns {-1,-1} when there's no quote pair; the scans stay inside the line (the
+  // old version read one byte past it when no closing quote was found)
   VIM_TEXT_OBJECT_SIG(vim_scan_object_quotes){
-  Range_i64 range = {};
+  Range_i64 range = vim_object_not_found();
   u8 character = vim_state.params.seek.character;
   Range_i64 line_range = get_line_range_from_pos(app, buffer, cursor_pos);
   if(range_size(line_range) >= 2){
@@ -461,42 +468,33 @@ VIM_COMMAND_SIG(vim_begin_line){
   u8 *line_text = push_buffer_range(app, scratch, buffer, line_range).str;
   i64 s = line_range.min;
   b32 inside_string = 0;
+  i64 open = -1;
   for(i64 i=line_range.min; i<cursor_pos; i++){
   if(character == line_text[i-s]){
-  range.min = i;
+  open = i;
   inside_string ^= 1;
   }
   }
 
-  if(inside_string){
-  for(range.max = cursor_pos; range.max < line_range.max; range.max++){
-  if(character == line_text[range.max-s]){ break; }
-  }
-  if(character != line_text[range.max-s]){ range = {}; }
-  }else{
-  range.min = 0;
+  i64 close_from = cursor_pos;
+  if(!inside_string){
+  // not inside: the object is the next quoted string starting at/after the cursor
+  open = -1;
   for(i64 i=cursor_pos; i<line_range.max; i++){
-  if(character == line_text[i-s]){
-  range.min = i;
-  break;
+  if(character == line_text[i-s]){ open = i; break; }
   }
+  close_from = open + 1;
   }
-  if(range.min){
-  range.max = line_range.max;
-  for(i64 i=range.min+1; i<line_range.max; i++){
-  if(character == line_text[i-s]){
-  range.max = i;
-  break;
-  }
-  }
-  if(character != line_text[range.max-s]){ range = {}; }
+  if(open >= 0){
+  for(i64 i=close_from; i<line_range.max; i++){
+  if(character == line_text[i-s]){ range = Ii64(open, i); break; }
   }
   }
 
-  if(vim_state.params.clusivity == VIM_Exclusive){
+  if(vim_object_found(range) && vim_state.params.clusivity == VIM_Exclusive){
   range.min++;
   range.max--;
-  if(range.min >= range.max){ range = {}; }
+  if(range.min > range.max){ range = vim_object_not_found(); }
   }
   }
   return range;
@@ -515,7 +513,7 @@ VIM_COMMAND_SIG(vim_begin_line){
   b32 nasr_keep_mark = (character == 'm' && vim_state.mode != VIM_Visual &&
                         vim_state.params.request == REQUEST_Yank);
 
-  Range_i64 range = {};
+  Range_i64 range = vim_object_not_found();
 
   b32 did_range = false;
   foreach(i, ArrayCount(vim_text_object_vtable)){
@@ -539,10 +537,19 @@ VIM_COMMAND_SIG(vim_begin_line){
   range = Ii64(vim_bounce_pair(app, buffer, cursor_pos, character),
   vim_bounce_pair(app, buffer, cursor_pos, b_character));
   }
-  if(vim_state.params.clusivity == VIM_Exclusive){
+  // NOTE(nasr): vim_bounce_pair returns the start pos when there's no match, so with no
+  // brackets around the cursor this was {cursor,cursor} and `da(` deleted the char under the
+  // cursor. Require a real open/close pair (same check as nasr_vim_object_range).
+  u8 open_c = buffer_get_char(app, buffer, range.min);
+  u8 close_c = buffer_get_char(app, buffer, range.max);
+  if(!(range.min < range.max && vim_character_can_bounce(open_c) &&
+       vim_bounce_direction(open_c) == Scan_Forward && close_c == vim_corresponding_bounce(open_c))){
+  range = vim_object_not_found();
+  }
+  if(vim_object_found(range) && vim_state.params.clusivity == VIM_Exclusive){
   range.min++;
   range.max--;
-  if(range.min >= range.max){ range = {}; }
+  if(range.min > range.max){ range = vim_object_not_found(); }
   vim_state.params.clusivity = VIM_Inclusive;
   }
   }
@@ -553,7 +560,7 @@ VIM_COMMAND_SIG(vim_begin_line){
   }
   }
 
-  if(range.min && range.max){
+  if(vim_object_found(range)){
   vim_push_jump(app, view);
   {
   Vim_Motion_Block vim_motion_block(app, range.max);

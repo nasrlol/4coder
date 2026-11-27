@@ -1,51 +1,34 @@
-~ memory safety
+~ todo (from the 2026-11-27 profiling/analysis pass; 2026-11-26 leftovers folded in)
 
+== power (things that keep the editor redrawing at 60fps with nothing changing)
 
-layer/vim/4coder_vim_search.cpp:68: `if(reg->data.size < 256) vim_realloc_string(&reg->data, 0)` reallocs to VIM_GROW_RATE(0) = 128 bytes but block_copy's the old size bytes into it (4coder_vim.h:120) -> heap overflow when the previous search was 129..255 bytes; the query also never grows past 128 (string_append at vim_search.cpp:93 is capped), so long searches are silently cut -> check cap, not size, and grow the register in the input loop
-layer/vim/4coder_vim_lister.cpp:407: text_field (up to 256 bytes, lister_base.h:73) is block_copy'd into vim_bot_buffer[256] (vim.h:13) after a prefix like "Command:"/"Switch:" with no bound; same at vim_lister.cpp:461 with highlighted_node->string on Return -> global overflow with a long filter or a long file/command name; clamp to the space left in vim_bot_text
-layer/vim/4coder_vim_registers.cpp:29: `reg->data.str[size-1]` reads one byte before the data when a register is Set but empty; `/foo<Esc>` does exactly that (search sets REGISTER_Set while typing, Esc sets size 0 at vim_search.cpp:84) -> guard size > 0
-layer/4coder_byp_draw.cpp:658: hex color preview: `i+=9; goto byp_hex_scan;` jumps back into the loop body without re-checking `i < range_size-9`, so a `0x` near the end of the visible range reads text[i..i+9] past the pushed range -> `continue` with i += 9 instead of the goto
+1. [done 2026-11-27] layer/4coder_byp_colors.cpp:46-60 (byp_tick_colors): the theme fade never converges -- pack_color truncates to 8 bits, so any channel that has to get brighter loses every small step and animates forever. Measured: ~9.5% of a core, ~220 wakeups/s, until restart, after any theme switch or theme-*.4coder save -> snap to target once within 1/255, or keep the fade in floats and stop when the packed colors are equal
+2. [done 2026-11-27] layer/vim/4coder_vim_lister.cpp:411, layer/vim/4coder_vim_search.cpp:79, layer/vim/4coder_nasr_vim_multiline.cpp:858: the vim lister, `/` search and align prompt call animate_in_n_milliseconds(app, 0) on every loop pass; the Animate event feeds back into get_next_input so they redraw at 60fps for as long as they're open (measured ~9.5% CPU with `/` open) -> only request a frame while something is actually moving (filebar offset)
+3. [done 2026-11-27 -- also needed the core fix: Linux user timers had no epoll tag, so timed wakeups fired once per process; fixed in code/platform_linux/linux_4ed_functions.cpp] layer/vim/4coder_vim_helper.cpp:7 (vim_show_cursor): with use_stock_cursor = false the blink redraws at 60fps for 10s after every keystroke -> animate_in_n_milliseconds(time until the next blink toggle) instead of 0
 
+== frame cost
 
-~ vim behaviour
+4. [done 2026-11-27 -- ./build_core.sh: -g -O2 core build; "./build_core.sh ship" also turns on SHIP_MODE (no asserts, no synchronous GL debug output). Do NOT use code/bin/build-linux.sh: it wipes build/themes and replaces the custom layer] code/bin/build-linux.sh + code/bin/4ed_build.cpp:374,724: the core (4ed, 4ed_app.so) is built DEV_BUILD = -g -O0 (DWARF shows "-O2 -O0"), so it runs unoptimized -> build the core optimized (OPT_BUILD, or -g -O2)
+5. [done 2026-11-27] code/custom/4coder_base_types.cpp:167-215 (+ the copy in layer/custom): block_copy / block_zero / block_match are byte-at-a-time loops; block_copy alone was ~30% of all CPU in the profile (mostly glyph vertex writes) -> memmove / memset / memcmp
+6. [done 2026-11-27] layer/4coder_byp_token.cpp:207: draw_comment_highlights runs twice per view per frame (here for NOTE/TODO and again in byp_draw_comments for NOTE/TODO/DEBUG/ISSUE/FIX) -> drop the call in byp_draw_token_colors
+7. [done 2026-11-27 -- cached per (buffer, pos, history, tokens, index file)] layer/4coder_byp_draw.cpp:22 (nasr_which_function): scans every code-index note in the file for each enclosing scope, per view, per frame (file bar) -> walk notes backwards from the scope open, or cache on (buffer, pos, index generation)
+8. [done 2026-11-27 -- +-64KB window, exact fallback to the full scan] layer/4coder_byp_draw.cpp:1049 (nasr_complete_preview_suffix): rescans the whole buffer for word matches on every typed character (~5% while typing in a 17k line file) -> limit the scan to a window around the cursor
 
+== bugs
 
-layer/vim/4coder_vim_commands.cpp:509: charwise `p` with the gap cursor at line end: move_right crosses the newline, text is pasted at the start of the next line (same bug as the uncommitted `a` fix in vim_insert_mode_after) -> only move right when pos < line end
-layer/vim/4coder_vim_commands.cpp:504: linewise `p` on the last line of a file without a trailing newline: seek_end_of_line + move_right can't move, "text\n" is inserted right after the last char and joins the line ("pasting should always make a new line") -> insert a "\n" first when at end of buffer
-layer/vim/4coder_vim_commands.cpp:547: `x` copies the wrong char into the small delete register: it deletes [pos, pos+1) but reads buffer_get_char(start) with start = pos+1 (the char after the deleted one); `X` at column 0 and `x` at line end delete the newline and join lines; count is ignored -> read the range that is deleted, stop at line bounds
-layer/vim/4coder_vim_commands.cpp:252: `r` at line end / on an empty line replaces the '\n' and joins lines; `~` (vim_commands.cpp:282) does the same replace on '\n' (no-op edit, still a history entry) -> do nothing on the line end
-layer/vim/4coder_vim_movement.cpp:552: `if(range.min && range.max)` treats a text object starting at buffer pos 0 as not found -> `diw` on the first word of a file does nothing; use a separate valid flag
-layer/vim/4coder_vim_movement.cpp:540: exclusive bounce objects: `if(range.min >= range.max) range = {}` after min++/max-- drops a single char -> `di(` on `(x)` does nothing; should be `>` (same at vim_movement.cpp:498)
-layer/vim/4coder_vim_commands.cpp:680: marks at pos 0 count as unset (`pos > 0`) -> "Mark a not set" for a mark on the first char; vim_prev_visual has the same check (vim_commands.cpp:185) so `gv` can't restore a selection starting at 0
-layer/vim/4coder_vim_commands.cpp:691: global mark goto calls vim_push_jump twice (again at vim_commands.cpp:694); vim_open_file_in_quotes too (vim_commands.cpp:723 and :746) -> duplicate jump stack entries
-layer/vim/4coder_vim_commands.cpp:791: move selection down onto a last line without a trailing newline: paste_pos clamps to buffer size and the copied lines are glued to the end of the last line; moving the last line up (copy_range.max + 1 past the end, vim_commands.cpp:789) copies it without a newline and joins it with the line above
-layer/vim/4coder_vim_commands.cpp:636: `3J` joins 3 times (4 lines), vim joins 3 lines (2 joins); N = Max(1, count - 1)
-layer/vim/4coder_vim_search.cpp:84: Esc during incremental search leaves the cursor on the last match instead of restoring where the search started, and leaves the search register Set with size 0 (hits the registers.cpp:29 read above)
-layer/vim/4coder_nasr_vim_multiline.cpp:333: region spec `n` matches the search register case-sensitively (string_match) but `/` searches insensitively (vim_search.cpp:119) -> `drn` misses matches that `/` found
+9. [done 2026-11-27] layer/4coder_byp_draw.cpp:778 (byp_draw_scope_brackets): reads ranges.ranges[0] without checking ranges.count; at top level it draws a range from uninitialized scratch memory. token_it_read() at the top of the function isn't null-checked either
+10. [done 2026-11-27 -- copy clamps to BYP_COLOR_ARRAY_CAP] layer/4coder_byp_colors.cpp:14,28 (byp_init_color_table / byp_copy_color_table): target arrays are fixed at 14 slots but the copy writes array->count entries -> overflow on a theme with more than 14 entries for one color
+11. [done 2026-11-27 -- also: Esc now restores the theme you had (preview used to stick), and opening no longer jumps to the first theme] layer/4coder_byp_colors.cpp (theme_lister; vim_theme_lister was merged into it): after picking a theme the "Theme:<name>" text is left in the bottom bar -> vim_reset_bottom_text() after the lister returns
+12. [done 2026-11-27] layer/vim/4coder_vim_search.cpp: Esc during `/` restores the cursor but the previous search pattern is gone (the register doubles as the query buffer) -> keep a copy of the old pattern and put it back on abort
+13. [done 2026-11-27 -- vim_shift_marks in the edit hook, global marks too] layer/vim/4coder_vim_hooks.cpp:196: marks aren't shifted when the buffer is edited, so they drift
+14. [done 2026-11-27 -- marks stored as pos+1, 0 = unset] layer/vim/4coder_vim_hooks.cpp: marks are -1 filled in vim_begin_buffer_inner; buffers that never went through that hook (created before the hooks are set) read 0 = "set at pos 0"
+15. [done 2026-11-27 -- {-1,-1} sentinel; also fixed: da( with no brackets deleted the char under the cursor, gf scanned for the last f/t char instead of ", quote scan read past the line] layer/vim/4coder_vim_movement.cpp: text objects still use {0,0} as "not found"; only w/W are special-cased, so a one-char object at pos 0 from another kind is still ignored -> give Vim_Text_Object_Func a found flag
+16. [done 2026-11-27 -- items stored ring index, pos fell below bot, u64 underflow -> ~2^64 entries on next open; reproduced in a logic test] layer/vim/4coder_vim_lists.cpp:406: jump lister reportedly crashes on many entries (BYP TODO) -> reproduce and fix
+17. [done 2026-11-27 -- ranges grow on the heap] layer/4coder_byp_token.cpp (byp_if0_ranges): `#if 0` dimming silently stops after BYP_IF0_MAX_RANGES (64) regions per buffer
 
+== unfinished
 
-~ completion / position context
-
-
-layer/4coder_byp_draw.cpp:1067: ghost text preview only checks that the next char is whitespace, so `foo| bar` draws the suggestion over " bar" -> require line end (or only trailing whitespace) after the cursor
-layer/4coder_nasr_member_complete.cpp:380: needle only extends backwards, completing at `a.fo|o` replaces "fo" and leaves the trailing "o" ("a.fieldo") -> extend needle.max forward over the identifier too
-layer/4coder_nasr_member_complete.cpp:341: struct field scan takes any identifier followed by ; , [ = : as a field, so `Foo x = bar;` inside a struct adds `bar`; method bodies are skipped but default initializers aren't -> skip from `=` to the next , or ;
-layer/4coder_nasr_member_complete.cpp:409: matches are case-insensitive but the ghost preview (byp_draw.cpp:1076) slices the suffix by needle size, so typing "Fo" previews "Foo" while Tab inserts "foo"
-layer/4coder_byp_draw.cpp:546: pos context loop has no iteration cap (calls_found < 4 only), every frame it walks back to the start of the file when the cursor isn't inside calls -> cap it like nasr_struct_context_find (4096); also `foo((x|`: the paren_nest == 0 `(` branch already dec'd once, the dec at byp_draw.cpp:573 skips the outer `(` and foo is never found
-
-
-~ struct context (disabled under #if 0 at byp_draw.cpp:525, broken when turned back on)
-
-
-layer/4coder_nasr_struct_context.cpp:212: designator is taken from the first `.name` found walking back, past commas -> `{.a = 1, |}` highlights `a` instead of the next field; stop looking for a designator once field_idx > 0
-layer/4coder_nasr_struct_context.cpp:260: `ident ( name ) {` is read as a compound literal, so `if (cond) {` / `while (running) {` look up a struct named after the variable -> check the token before the `(` is not a keyword/identifier
-layer/4coder_nasr_struct_context.cpp:152: nasr_code_index_find_struct walks every buffer's notes and tokens under code_index_lock every frame -> cache on buffer/pos/history like the complete preview
-layer/4coder_nasr_struct_context.cpp:307: field index in the tooltip counts every ; and , at depth 1 (method decls, static members) but the initializer index only counts commas -> highlights the wrong field for structs with methods
-
-
-~ minor / conditional
-
-
-layer/vim/4coder_vim_commands.cpp:592: CRLF files: `J` deletes from the '\n' (get_line_end_pos), the '\r' stays ("foo\r bar"); multiline `A`/`$` specs (nasr_vim_multiline.cpp:241, :256) and the new `a` check (vim_commands.cpp:115) also treat '\r' as text (`a` on an empty CRLF line steps between \r and \n); only matters if buffers keep their \r
-layer/vim/4coder_vim_commands.cpp:49: buffer peek scroll divides by buffer_get_line_count, which is 0 when the peeked buffer was killed -> NaN ratio
-layer/4coder_nasr_language.cpp:78: language is cached once per buffer and never reset, a save-as to another extension keeps the old language (file bar + member complete gate)
+18. [done 2026-11-27 -- directional Ctrl+H/J/K/L, Ctrl-W submode (h/j/k/l/w/W/p/s/v/n/c/q/o/=/+/-/</>/_/|/r/R/x + counts), nasr_goto moved to gd] layer/vim/4coder_vim_bindings.cpp:206: window binds incomplete
+19. [done 2026-11-27 -- copy clamped to the line end (blank lines added an extra register row), paste pads short lines and grows the buffer] layer/vim/4coder_vim_block.cpp:99: block edits don't handle empty lines
+20. layer/4coder_byp_draw.cpp:579: parameter-number underlining in the signature tooltip (account for variadic ...)
+21. layer/4coder_byp.cpp:32: leftover `#if 0` test snippet (String8 text = "Hello World") -> delete

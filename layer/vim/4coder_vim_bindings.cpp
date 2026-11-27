@@ -54,7 +54,7 @@ function void vim_overwrite(Table_u64_u64 *table, u64 key, u64 val){
 
  VimBind(N|MAP, vim_open_file_in_quotes,         SUB_G, KeyCode_F);
 
- VimBind(N|MAP, vim_goto_definition,               (Ctl|KeyCode_W));
+ VimBind(N|MAP, vim_goto_definition,               SUB_G, KeyCode_D);
  VimBind(N|MAP, vim_next_4coder_jump,              (Alt|KeyCode_N));
  VimBind(N|MAP, vim_prev_4coder_jump,          (Sft|Alt|KeyCode_N));
  VimBind(N|MAP, vim_first_4coder_jump,         (Sft|Alt|KeyCode_M));
@@ -203,11 +203,70 @@ function void vim_overwrite(Table_u64_u64 *table, u64 key, u64 val){
  VimBind(N|V|MAP, vim_scroll_screen_mid,         SUB_Z, KeyCode_Z);
  VimBind(N|V|MAP, vim_scroll_screen_bot,         SUB_Z, KeyCode_B);
 
- /// Window Binds (TODO(BYP): Do the rest of these, and do them properly)
- VimBind(N|MAP, change_active_panel_backwards,     (Ctl|KeyCode_H));
- VimBind(N|MAP, change_active_panel_backwards,     (Ctl|KeyCode_J));
- VimBind(N|MAP, change_active_panel,               (Ctl|KeyCode_K));
- VimBind(N|MAP, change_active_panel,               (Ctl|KeyCode_L));
+ /// Window Binds
+ VimBind(N|MAP, vim_panel_left,                    (Ctl|KeyCode_H));
+ VimBind(N|MAP, vim_panel_down,                    (Ctl|KeyCode_J));
+ VimBind(N|MAP, vim_panel_up,                      (Ctl|KeyCode_K));
+ VimBind(N|MAP, vim_panel_right,                   (Ctl|KeyCode_L));
+
+ VimBind(N|MAP, vim_submode_w,                     (Ctl|KeyCode_W));
+
+ VimBind(N|MAP, vim_panel_left,             SUB_W, KeyCode_H);
+ VimBind(N|MAP, vim_panel_left,             SUB_W, (Ctl|KeyCode_H));
+ VimBind(N|MAP, vim_panel_left,             SUB_W, KeyCode_Left);
+ VimBind(N|MAP, vim_panel_down,             SUB_W, KeyCode_J);
+ VimBind(N|MAP, vim_panel_down,             SUB_W, (Ctl|KeyCode_J));
+ VimBind(N|MAP, vim_panel_down,             SUB_W, KeyCode_Down);
+ VimBind(N|MAP, vim_panel_up,               SUB_W, KeyCode_K);
+ VimBind(N|MAP, vim_panel_up,               SUB_W, (Ctl|KeyCode_K));
+ VimBind(N|MAP, vim_panel_up,               SUB_W, KeyCode_Up);
+ VimBind(N|MAP, vim_panel_right,            SUB_W, KeyCode_L);
+ VimBind(N|MAP, vim_panel_right,            SUB_W, (Ctl|KeyCode_L));
+ VimBind(N|MAP, vim_panel_right,            SUB_W, KeyCode_Right);
+
+ VimBind(N|MAP, vim_panel_next,             SUB_W, KeyCode_W);
+ VimBind(N|MAP, vim_panel_next,             SUB_W, (Ctl|KeyCode_W));
+ VimBind(N|MAP, vim_panel_prev_cycle,       SUB_W, (Sft|KeyCode_W));
+ VimBind(N|MAP, vim_panel_last,             SUB_W, KeyCode_P);
+ VimBind(N|MAP, vim_panel_last,             SUB_W, (Ctl|KeyCode_P));
+
+ VimBind(N|MAP, open_panel_hsplit,          SUB_W, KeyCode_S);
+ VimBind(N|MAP, open_panel_hsplit,          SUB_W, (Ctl|KeyCode_S));
+ VimBind(N|MAP, open_panel_vsplit,          SUB_W, KeyCode_V);
+ VimBind(N|MAP, open_panel_vsplit,          SUB_W, (Ctl|KeyCode_V));
+ VimBind(N|MAP, vim_panel_new,              SUB_W, KeyCode_N);
+ VimBind(N|MAP, vim_panel_new,              SUB_W, (Ctl|KeyCode_N));
+ VimBind(N|MAP, close_panel,                SUB_W, KeyCode_C);
+ VimBind(N|MAP, close_panel,                SUB_W, (Ctl|KeyCode_C));
+ VimBind(N|MAP, q,                          SUB_W, KeyCode_Q);
+ VimBind(N|MAP, q,                          SUB_W, (Ctl|KeyCode_Q));
+ VimBind(N|MAP, vim_close_other_panels,     SUB_W, KeyCode_O);
+ VimBind(N|MAP, vim_close_other_panels,     SUB_W, (Ctl|KeyCode_O));
+
+ VimBind(N|MAP, vim_panel_equalize,         SUB_W, KeyCode_Equal);
+ VimBind(N|MAP, vim_panel_grow_height,      SUB_W, (Sft|KeyCode_Equal));
+ VimBind(N|MAP, vim_panel_shrink_height,    SUB_W, KeyCode_Minus);
+ VimBind(N|MAP, vim_panel_grow_width,       SUB_W, (Sft|KeyCode_Period));
+ VimBind(N|MAP, vim_panel_shrink_width,     SUB_W, (Sft|KeyCode_Comma));
+ VimBind(N|MAP, vim_panel_max_height,       SUB_W, (Sft|KeyCode_Minus));
+ VimBind(N|MAP, vim_panel_max_width,        SUB_W, (Sft|KeyCode_BackwardSlash));
+
+ VimBind(N|MAP, vim_panel_rotate_down,      SUB_W, KeyCode_R);
+ VimBind(N|MAP, vim_panel_rotate_down,      SUB_W, (Ctl|KeyCode_R));
+ VimBind(N|MAP, vim_panel_rotate_up,        SUB_W, (Sft|KeyCode_R));
+ VimBind(N|MAP, vim_panel_exchange,         SUB_W, KeyCode_X);
+ VimBind(N|MAP, vim_panel_exchange,         SUB_W, (Ctl|KeyCode_X));
+
+ VimBind(N|MAP, vim_submode_w_0,            SUB_W, KeyCode_0);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_1);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_2);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_3);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_4);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_5);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_6);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_7);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_8);
+ VimBind(N|MAP, vim_submode_w_digit,        SUB_W, KeyCode_9);
 
 
 #undef I

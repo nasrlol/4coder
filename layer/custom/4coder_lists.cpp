@@ -778,13 +778,7 @@ generate_all_buffers_list__output_buffer(Application_Links *app, Lister *lister,
 
   ////////////////////////////////
 
-  CUSTOM_UI_COMMAND_SIG(theme_lister)
-  CUSTOM_DOC("Opens an interactive list of all registered themes.")
-  {
-  Color_Table *color_table = get_color_table_from_user(app);
-  if (color_table != 0){
-  active_color_table = *color_table;
- }
-}
+  // NOTE(nasr): theme_lister is defined in the nasr layer (4coder_byp_colors.cpp), with live
+  // preview while navigating
 
 // BOTTOM

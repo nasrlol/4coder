@@ -344,10 +344,12 @@ VIM_REQUEST_SIG(vim_apply_yank){
  }
 
  b32 was_in_sub_mode = (vim_state.sub_mode != SUB_None);
+ Custom_Command_Function *ran_func = 0;
  u64 function_data=0;
  if(table_read(vim_maps + vim_state.mode + vim_state.sub_mode*VIM_MODE_COUNT, code, &function_data)){
  Custom_Command_Function *vim_func = (Custom_Command_Function *)IntAsPtr(function_data);
  if(vim_func){
+ ran_func = vim_func;
  // Pre command stuff
  View_ID view = get_active_view(app, Access_ReadVisible);
  Managed_Scope scope = view_get_managed_scope(app, view);
@@ -381,7 +383,10 @@ VIM_REQUEST_SIG(vim_apply_yank){
  result = true;
  }
  }
- if(was_in_sub_mode){ vim_state.sub_mode = SUB_None; }
+ b32 keep_sub_w = (vim_state.sub_mode == SUB_W &&
+                   (ran_func == vim_submode_w_digit ||
+                    (ran_func == vim_submode_w_0 && vim_state.number > 0)));
+ if(was_in_sub_mode && !keep_sub_w){ vim_state.sub_mode = SUB_None; }
 
  if(vim_keystroke_text.size >= vim_keystroke_text.cap){ vim_keystroke_text.size = 0; }
 

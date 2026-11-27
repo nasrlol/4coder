@@ -167,9 +167,8 @@ i32_ceil32(f32 v){
 
  function void
  block_zero(void *mem, u64 size){
- for (u8 *p = (u8*)mem, *e = p + size; p < e; p += 1){
- *p = 0;
- }
+ // NOTE(nasr): these were byte loops; memset/memmove/memcmp are many times faster
+ if (size != 0){ memset(mem, 0, size); }
  }
  function void
  block_zero(String_Const_u8 data){
@@ -177,9 +176,7 @@ i32_ceil32(f32 v){
  }
  function void
  block_fill_ones(void *mem, u64 size){
- for (u8 *p = (u8*)mem, *e = p + size; p < e; p += 1){
- *p = 0xFF;
- }
+ if (size != 0){ memset(mem, 0xFF, size); }
  }
  function void
  block_fill_ones(String_Const_u8 data){
@@ -187,33 +184,12 @@ i32_ceil32(f32 v){
  }
  function void
  block_copy(void *dst, const void *src, u64 size){
- u8 *d = (u8*)dst;
- u8 *s = (u8*)src;
- if (d < s){
- u8 *e = d + size;
- for (; d < e; d += 1, s += 1){
- *d = *s;
- }
- }
- else if (d > s){
- u8 *e = d;
- d += size - 1;
- s += size - 1;
- for (; d >= e; d -= 1, s -= 1){
- *d = *s;
- }
- }
+ // NOTE(nasr): memmove keeps the old overlap-safe semantics (it copied backwards when dst > src)
+ if (size != 0 && dst != src){ memmove(dst, src, size); }
  }
  function b32
  block_match(void *a, void *b, u64 size){
- b32 result = true;
- for (u8 *pa = (u8*)a, *pb = (u8*)b, *ea = pa + size; pa < ea; pa += 1, pb += 1){
- if (*pa != *pb){
- result = false;
- break;
- }
- }
- return(result);
+ return(size == 0 || memcmp(a, b, size) == 0);
  }
  function i32
  block_compare(void *a, void *b, u64 size){

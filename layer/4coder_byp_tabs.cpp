@@ -567,7 +567,7 @@ CUSTOM_DOC("[TAB] writes the tabs/layout to session_file now")
  TAB_file_save(app);
 }
 
-CUSTOM_COMMAND_SIG(byp_try_exit)
+CUSTOM_COMMAND_SIG(try_exit)
 CUSTOM_DOC("Saves the tab session, then runs the vim try-exit check")
 {
  User_Input input = get_current_input(app);

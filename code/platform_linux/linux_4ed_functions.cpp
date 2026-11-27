@@ -349,6 +349,10 @@ system_wake_up_timer_create(void){
     
     // NOTE(inso): timers created on-demand to avoid file-descriptor exhaustion.
     object->timer.fd = -1;
+    // NOTE(nasr): the tag was never set, so it stayed 0 = EPOLL_X11: a fired timer was handled as
+    // an X11 event, never closed/recreated, and (EPOLLONESHOT) never reported again --
+    // animate_in_n_milliseconds(app, n > 0) only ever worked once per process.
+    object->timer.epoll_tag = EPOLL_USER_TIMER;
     return object_to_handle(object);
 }
 

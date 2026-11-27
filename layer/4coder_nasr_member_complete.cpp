@@ -337,6 +337,20 @@ member_complete_struct_fields(Application_Links *app, Arena *arena, Buffer_ID bu
    case TokenCppKind_ParenOp:   { paren += 1; }break;
    case TokenCppKind_ParenCl:   { paren -= 1; }break;
    case TokenCppKind_Semicolon: { last_type = {}; }break;
+   case TokenCppKind_Eq:{
+    // default initializer (`Foo x = bar;`, `int a = f(1, 2), b;`): skip to the `,` / `;`
+    // that ends it, so identifiers inside aren't taken as fields
+    if(paren != 0){ break; }
+    for(i32 nest = 0; i + 1 < n; i += 1){
+     i16 k = v[i+1]->sub_kind;
+     if(nest == 0 && (k == TokenCppKind_Comma || k == TokenCppKind_Semicolon)){ break; }
+     if(k == TokenCppKind_ParenOp || k == TokenCppKind_BraceOp || k == TokenCppKind_BrackOp){ nest += 1; }
+     if(k == TokenCppKind_ParenCl || k == TokenCppKind_BraceCl || k == TokenCppKind_BrackCl){
+      if(nest == 0){ break; }
+      nest -= 1;
+     }
+    }
+   }break;
    case TokenCppKind_Identifier:{
     if(paren != 0 || i + 1 >= n){ break; }
     switch(v[i+1]->sub_kind){
@@ -382,6 +396,14 @@ member_complete_query(Application_Links *app, Arena *arena, Buffer_ID buffer, i6
   if(!(character_is_alpha_numeric(c) || c == '_')){ break; }
   needle.min -= 1;
  }
+ // NOTE(nasr): the replace range also covers the rest of the identifier after the cursor
+ // (`a.fo|o`), matching still only uses what's before the cursor
+ i64 buffer_size = buffer_get_size(app, buffer);
+ for(i32 i = 0; i < MEMBER_COMPLETE_MAX_NEEDLE && needle.max < buffer_size; i += 1){
+  u8 c = buffer_get_char(app, buffer, needle.max);
+  if(!(character_is_alpha_numeric(c) || c == '_')){ break; }
+  needle.max += 1;
+ }
 
  Scratch_Block scratch(app, arena);
  String_Const_u8 chain[MEMBER_COMPLETE_MAX_CHAIN];
@@ -402,12 +424,18 @@ member_complete_query(Application_Links *app, Arena *arena, Buffer_ID buffer, i6
 
  result.resolved = true;
  result.needle = needle;
- String_Const_u8 typed = push_buffer_range(app, scratch, buffer, needle);
+ String_Const_u8 typed = push_buffer_range(app, scratch, buffer, Ii64(needle.min, pos));
  result.matches = push_array(arena, String_Const_u8, Max(1, s.count));
- for(i32 i = 0; i < s.count; i += 1){
-  String_Const_u8 name = s.fields[i].name;
-  if(name.size >= typed.size && string_match_insensitive(string_prefix(name, typed.size), typed)){
-   result.matches[result.match_count++] = push_string_copy(arena, name);
+ // NOTE(nasr): two passes: exact-case prefix matches first, then the case-insensitive rest
+ for(i32 pass = 0; pass < 2; pass += 1){
+  for(i32 i = 0; i < s.count; i += 1){
+   String_Const_u8 name = s.fields[i].name;
+   if(name.size < typed.size){ continue; }
+   String_Const_u8 prefix = string_prefix(name, typed.size);
+   b32 exact = string_match(prefix, typed);
+   if(pass == 0 ? exact : (!exact && string_match_insensitive(prefix, typed))){
+    result.matches[result.match_count++] = push_string_copy(arena, name);
+   }
   }
  }
  return(result);

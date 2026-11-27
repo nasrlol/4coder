@@ -8,15 +8,15 @@ global b32 byp_relative_numbers;
 global b32 byp_show_scrollbars;
 global b32 nasr_use_stock_filebar;
 
-CUSTOM_COMMAND_SIG(byp_toggle_show_hex_colors)
+CUSTOM_COMMAND_SIG(toggle_show_hex_colors)
 CUSTOM_DOC("Toggles value for `show_hex_colors`")
 { byp_show_hex_colors ^= 1; }
 
-CUSTOM_COMMAND_SIG(byp_toggle_relative_numbers)
+CUSTOM_COMMAND_SIG(toggle_relative_numbers)
 CUSTOM_DOC("Toggles value for `relative_numbers`")
 { byp_relative_numbers ^= 1; }
 
-CUSTOM_COMMAND_SIG(byp_toggle_show_scrollbars)
+CUSTOM_COMMAND_SIG(toggle_scrollbars)
 CUSTOM_DOC("Toggles value for `show_scrollbars`")
 { byp_show_scrollbars ^= 1; }
 
@@ -24,14 +24,14 @@ CUSTOM_COMMAND_SIG(nasr_toggle_stock_filebar)
 CUSTOM_DOC("Toggles between the vim filebar and the stock 4coder filebar")
 { nasr_use_stock_filebar ^= 1; }
 
-CUSTOM_COMMAND_SIG(byp_clear_jumps)
+CUSTOM_COMMAND_SIG(clear_jumps)
 CUSTOM_DOC("Clears jump buffer")
 {
  unlock_jump_buffer();
  }
 
- CUSTOM_COMMAND_SIG(byp_close_all_buffers)
- CUSTOM_DOC("Reloads buffers")
+ CUSTOM_COMMAND_SIG(close_all_buffers)
+ CUSTOM_DOC("Closes every buffer except *special* ones. Unsaved changes are discarded without asking.")
  {
  for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
  buffer != 0;
@@ -41,7 +41,7 @@ CUSTOM_DOC("Clears jump buffer")
  }
  }
 
- CUSTOM_COMMAND_SIG(byp_reload_config)
+ CUSTOM_COMMAND_SIG(reload_config)
  CUSTOM_DOC("Reloads config.4coder file")
  {
  // NOTE(nasr): pass 0 so default_font_size / default_font_hinting come from config.4coder
@@ -77,8 +77,8 @@ CUSTOM_DOC("Clears jump buffer")
  }
  }
 
- CUSTOM_COMMAND_SIG(byp_reopen_all_buffers)
- CUSTOM_DOC("Reload current buffer")
+ CUSTOM_COMMAND_SIG(reopen_all_buffers)
+ CUSTOM_DOC("Reloads every open file from disk, keeping each view's scroll position.")
  {
  View_ID views[32];
  Buffer_Scroll scrolls[32];
@@ -138,7 +138,7 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
 }
 
 
- CUSTOM_COMMAND_SIG(byp_reset_face_size)
+ CUSTOM_COMMAND_SIG(reset_face_size)
  CUSTOM_DOC("Resets face size to default")
  {
  View_ID view = get_active_view(app, Access_Always);
@@ -153,7 +153,7 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  // but that's to much of a fuss for something so small
  global Buffer_Cursor byp_col_cursor;
 
- CUSTOM_COMMAND_SIG(byp_toggle_set_col_ruler)
+ CUSTOM_COMMAND_SIG(toggle_column_ruler)
  CUSTOM_DOC("Toggles the column ruler. Set to cursor column when on.")
  {
  View_ID view = get_active_view(app, Access_ReadVisible);
@@ -169,17 +169,18 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
 
  global b32 byp_bracket_opened;
 
- CUSTOM_COMMAND_SIG(byp_write_text_input)
+ CUSTOM_COMMAND_SIG(write_text_input)
  CUSTOM_DOC("Inserts whatever text was used to trigger this command.")
  {
  User_Input in = get_current_input(app);
  String_Const_u8 insert = to_writable(&in);
- byp_bracket_opened = insert.str[insert.size-1] == '{';
+ // NOTE(nasr): also called by stock code (auto-indent, word complete); guard empty input
+ byp_bracket_opened = (insert.size > 0 && insert.str[insert.size-1] == '{');
  write_text(app, insert);
  }
 
- CUSTOM_COMMAND_SIG(byp_auto_complete_bracket)
- CUSTOM_DOC("Sets the right size of the view near the x position of the cursor.")
+ CUSTOM_COMMAND_SIG(newline_auto_close_brace)
+ CUSTOM_DOC("Inserts a newline; right after typing `{` it also adds the closing `}` with an empty line between.")
  {
  View_ID view = get_active_view(app, Access_ReadWriteVisible);
  i64 pos = view_get_character_legal_pos_from_pos(app, view, view_get_cursor_pos(app, view));
@@ -261,13 +262,13 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  }
  }
 
- CUSTOM_COMMAND_SIG(byp_find_divider_up)
+ CUSTOM_COMMAND_SIG(find_divider_up)
  CUSTOM_DOC("Find //- divider above cursor")
  {
  byp_find_divider(app, Scan_Backward);
  }
 
- CUSTOM_COMMAND_SIG(byp_find_divider_down)
+ CUSTOM_COMMAND_SIG(find_divider_down)
  CUSTOM_DOC("Find //- divider below cursor")
  {
  byp_find_divider(app, Scan_Forward);
@@ -292,7 +293,7 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  { buffer_identifier(string_u8_litexpr("todo.txt")),  1.f, 1.f },
  };
 
- CUSTOM_COMMAND_SIG(byp_list_all_locations_selection)
+ CUSTOM_COMMAND_SIG(list_all_locations_of_selection)
  CUSTOM_DOC("Lists locations of selection range")
  {
  vim_normal_mode(app);
@@ -306,7 +307,7 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  list_all_locations__generic(app, range_string, ListAllLocationsFlag_CaseSensitive|ListAllLocationsFlag_MatchSubstring);
  }
 
- CUSTOM_COMMAND_SIG(byp_open_current_peek)
+ CUSTOM_COMMAND_SIG(open_peek_in_view)
  CUSTOM_DOC("Sets the active view to the current peeked buffer")
  {
  View_ID view = get_active_view(app, Access_ReadWriteVisible);
@@ -343,7 +344,7 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  }
  }
  range.min++; range.max--;
- if(range.min >= range.max){ range = {}; }
+ if(range.min >= range.max){ range = vim_object_not_found(); }
 
  return range;
  }
@@ -355,7 +356,7 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  i64 s = line_range.min;
  u8 *line_text = push_buffer_range(app, scratch, buffer, line_range).str;
  u8 c = line_text[cursor_pos-s];
- if(!character_is_alpha_numeric(c)){ return {}; }
+ if(!character_is_alpha_numeric(c)){ return vim_object_not_found(); }
  cursor_pos += line_text[cursor_pos-s] == '_';
  range.min = range.max = cursor_pos;
 
@@ -364,18 +365,18 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  c = line_text[range.min-s];
  if(!character_is_alpha_numeric(c) || c == '_'){ valid = true; break; }
  }
- if(!valid){ return {}; }
+ if(!valid){ return vim_object_not_found(); }
 
  valid=false;
  for(; range.max>0; range.max++){
  c = line_text[range.max-s];
  if(!character_is_alpha_numeric(c) || c == '_'){ valid = true; break; }
  }
- if(!valid){ return {}; }
+ if(!valid){ return vim_object_not_found(); }
 
  range.min += (vim_state.params.clusivity != VIM_Inclusive || line_text[range.min-s] != '_');
  range.max -= (vim_state.params.clusivity != VIM_Inclusive || line_text[range.max-s] != '_');
- if(range.min >= range.max){ range = {}; }
+ if(range.min >= range.max){ range = vim_object_not_found(); }
 
  return range;
  }
@@ -397,7 +398,7 @@ CUSTOM_DOC("Auto-indent and clean all loaded buffers")
  buffer_post_fade(app, buffer, 0.667f, range, fcolor_resolve(fcolor_id(defcolor_paste)));
  }
 
- VIM_COMMAND_SIG(byp_request_title){ byp_make_vim_request(app, BYP_REQUEST_Title); }
+ VIM_COMMAND_SIG(vim_title_case){ byp_make_vim_request(app, BYP_REQUEST_Title); }
 
 
  // NOTE: Ctrl-W tries, in order: the file named in the quotes around the cursor,

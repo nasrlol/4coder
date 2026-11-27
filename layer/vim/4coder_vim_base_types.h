@@ -38,6 +38,7 @@ struct Vim_Text_Object{
  SUB_Z,
  SUB_Leader,
  SUB_NasrCtlX,
+ SUB_W,
  VIM_SUBMODE_COUNT,
  };
 
@@ -154,6 +155,7 @@ struct Vim_Text_Object{
  struct Vim_Prev_Visual{
  i64 cursor_pos, mark_pos;
  Vim_Edit_Type edit_type;
+ b32 valid;
  };
 
  struct Vim_Global_Mark{

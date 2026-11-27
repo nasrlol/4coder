@@ -405,9 +405,12 @@ ctrl_backspace_utf8(String_Const_u8 string){
  Vec2_i32 col_row = calc_col_row(app, lister);
  i32 col_num = col_row.x;
  i32 visible_count = col_row.x*col_row.y;
- block_copy(dest, lister->text_field.str, lister->text_field.size);
- vim_bot_text.size = after_size + lister->text_field.size;
- animate_in_n_milliseconds(app, 0);
+ u64 shown = Min(lister->text_field.size, vim_bot_text.cap - after_size);
+ block_copy(dest, lister->text_field.str, shown);
+ vim_bot_text.size = after_size + shown;
+ // NOTE(nasr): no animate_in_n_milliseconds(app, 0) here: every real input already gets a
+ // follow-up frame from the core, and the Animate event that request produced woke this loop
+ // again, so the lister redrew at 60fps for as long as it was open
 
  Lister_Activation_Code result = ListerActivation_Continue;
  b32 handled = true;
@@ -458,8 +461,11 @@ ctrl_backspace_utf8(String_Const_u8 string){
  void *user_data = 0;
  if(in_range(0, lister->raw_item_index, lister->options.count)){
  user_data = lister_get_user_data(lister, lister->raw_item_index);
- block_copy(dest, lister->highlighted_node->string.str, lister->highlighted_node->string.size);
- vim_bot_text.size = base_size + lister->highlighted_node->string.size;
+ if(lister->highlighted_node != 0){
+ u64 shown = Min(lister->highlighted_node->string.size, vim_bot_text.cap - base_size);
+ block_copy(dest, lister->highlighted_node->string.str, shown);
+ vim_bot_text.size = base_size + shown;
+ }
  }
  lister_activate(app, lister, user_data, false);
  result = ListerActivation_Finished;

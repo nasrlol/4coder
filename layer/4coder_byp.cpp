@@ -39,6 +39,12 @@ int     a    = 3;
 #include "4coder_vimrc.h"
 #include "vim/4coder_vim_include.h"
 
+// NOTE(nasr): these replace the stock commands of the same name (the stock definitions were
+// removed from layer/custom). Stock code compiled before the layer still binds/calls them.
+void write_text_input(struct Application_Links *app);
+void project_fkey_command(struct Application_Links *app);
+void list_all_locations_of_selection(struct Application_Links *app);
+
 #include "4coder_default_include.cpp"
 
 #include "vim/4coder_vim_include.cpp"
@@ -55,9 +61,6 @@ int     a    = 3;
 #include "4coder_byp_commands.cpp"
 #include "4coder_byp_tabs.cpp"
 
-#if 0
-#include "4coder_nasr_struct_context.cpp"
-#endif
 #include "4coder_nasr_member_complete.cpp"
 #include "4coder_byp_draw.cpp"
 

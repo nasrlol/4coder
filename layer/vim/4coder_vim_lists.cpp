@@ -205,6 +205,9 @@ vim__fill_command_lister(Arena *arena, Lister *lister, i32 *command_ids, i32 com
 
   String_Const_u8 file_name = result.file_name_activated;
   if(file_name.size == 0){ file_name = result.file_name_in_text_field; }
+  // NOTE(nasr): Enter on an empty field with nothing highlighted: the slash check below would
+  // read file_name.str[-1] and create_buffer would get the folder path
+  if(file_name.size == 0){ break; }
 
   String_Const_u8 path = result.path_in_text_field;
   String_Const_u8 full_file_name =
@@ -241,34 +244,6 @@ vim__fill_command_lister(Arena *arena, Lister *lister, i32 *command_ids, i32 com
   }
   }
 
-
-  CUSTOM_UI_COMMAND_SIG(vim_theme_lister)
-  CUSTOM_DOC("Opens an interactive list of all registered themes.")
-  {
-  Color_Table_List *color_table_list = &global_theme_list;
-
-  Scratch_Block scratch(app);
-  Lister_Block lister(app, scratch);
-  vim_lister_set_default_handlers(lister);
-  vim_reset_bottom_text();
-
-  lister_add_item(lister, string_u8_litexpr("4coder"), string_u8_litexpr(""),
-  (void*)&default_color_table, 0);
-
-  for(Color_Table_Node *node = color_table_list->first; node; node = node->next){
-  lister_add_item(lister, node->name, string_u8_litexpr(""), (void*)&node->table, 0);
-  }
-
-  #if VIM_USE_BOTTOM_LISTER
-  string_append(&vim_bot_text, string_u8_litexpr("Theme:"));
-  #endif
-  Lister_Result l_result = vim_run_lister(app, lister);
-
-  Color_Table *result = 0;
-  if(!l_result.canceled){ result = (Color_Table*)l_result.user_data; }
-
-  if(result != 0){ active_color_table = *result; }
-  }
 
   CUSTOM_UI_COMMAND_SIG(vim_switch_lister)
   CUSTOM_DOC("Opens an interactive list of all loaded buffers.")
@@ -395,15 +370,21 @@ vim__fill_command_lister(Arena *arena, Lister *lister, i32 *command_ids, i32 com
 
   Managed_Scope scope = view_get_managed_scope(app, view);
   Vim_Jump_List *jump_list = scope_attachment(app, scope, vim_view_jumps, Vim_Jump_List);
-  i32 index = i32(PtrAsInt(lister_get_user_data(lister, lister->raw_item_index)));
-  if(!in_range(0, index, ArrayCount(jump_list->markers))){ return; }
-  Point_Stack_Slot *slot = &jump_list->markers[index];
+  if(jump_list == 0 || !in_range(0, lister->raw_item_index, lister->options.count)){ return; }
+  // user data is the logical jump position (see vim_jump_lister)
+  u64 logical = u64(PtrAsInt(lister_get_user_data(lister, lister->raw_item_index)));
+  Point_Stack_Slot *slot = &jump_list->markers[logical % ArrayCount(jump_list->markers)];
+  if(!buffer_exists(app, slot->buffer)){ return; }
   view_set_buffer(app, view, slot->buffer, SetBuffer_KeepOriginalGUI);
   view_set_cursor_and_preferred_x(app, view, seek_pos(slot->object));
   center_view(app);
   }
 
-  // TODO(BYP): Jump lister crashed on many entries
+  // NOTE(nasr): "crashed on many entries": items stored the ring index (pos % 256) and
+  // vim_set_jump took it as the logical position. Once the list had wrapped that put pos below
+  // bot, `pos - bot` (u64) underflowed and the next open tried to list ~2^64 entries. Items now
+  // carry the logical position; the list is pos-1 (the slot just pushed = where you are) down
+  // to bot (it started at the unwritten slot `pos`, and Esc jumped there).
   CUSTOM_UI_COMMAND_SIG(vim_jump_lister)
   CUSTOM_DOC("Opens an interactive lists of the views jumps")
   {
@@ -418,11 +399,13 @@ vim__fill_command_lister(Arena *arena, Lister *lister, i32 *command_ids, i32 com
   if(jump_list == NULL){ return; }
   vim_push_jump(app, view);
   u64 slot_cap = ArrayCount(jump_list->markers);
-  u64 slot_count = jump_list->pos - jump_list->bot;
+  u64 current = jump_list->pos - 1; // the slot vim_push_jump just wrote
+  u64 slot_count = (jump_list->pos > jump_list->bot ? jump_list->pos - jump_list->bot : 0);
+  slot_count = Min(slot_count, slot_cap);
   for(u64 i=0; i<slot_count; i++){
-  u64 pos = jump_list->pos - i;
-  i64 idx = (pos % slot_cap);
-  Point_Stack_Slot *slot = jump_list->markers + idx;
+  u64 logical = current - i;
+  Point_Stack_Slot *slot = jump_list->markers + (logical % slot_cap);
+  if(!buffer_exists(app, slot->buffer)){ continue; } // buffer closed since the jump
   i64 line = get_line_number_from_pos(app, slot->buffer, i64(slot->object));
 
   String_Const_u8 line_text = push_buffer_line(app, scratch, slot->buffer, line);
@@ -433,11 +416,12 @@ vim__fill_command_lister(Arena *arena, Lister *lister, i32 *command_ids, i32 com
   if(blank){ line_text = string_u8_litexpr("*blank*"); }
   line_text.size = Min(line_text.size, 20);
   String_Const_u8 unique_name = push_buffer_unique_name(app, scratch, slot->buffer);
-  String_Const_u8 text = push_stringf(scratch, "[%.*s]:(%d)", string_expand(unique_name), line);
-  lister_add_item(lister, text, line_text, IntAsPtr(idx), 0);
+  String_Const_u8 text = push_stringf(scratch, "[%.*s]:(%lld)", string_expand(unique_name), (long long)line);
+  lister_add_item(lister, text, line_text, IntAsPtr(logical), 0);
   }
   Lister_Result l_result = vim_run_lister(app, lister);
-  u64 pos = (!l_result.canceled ? u64(PtrAsInt(l_result.user_data)) : jump_list->pos);
+  // Esc stays where you were (the slot just pushed), not the unwritten slot at pos
+  u64 pos = (!l_result.canceled ? u64(PtrAsInt(l_result.user_data)) : current);
   vim_set_jump(app, view, jump_list, pos);
   jump_list->pos -= (jump_list->pos == jump_list->top);
   jump_list->top -= 1;

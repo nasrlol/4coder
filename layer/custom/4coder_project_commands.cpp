@@ -971,31 +971,8 @@ prj_pattern_list_from_extension_array(Arena *arena, String8Array list){
  }
  }
 
- CUSTOM_COMMAND_SIG(project_fkey_command)
- CUSTOM_DOC("Run an 'fkey command' configured in a project.4coder file.  Determines the index of the 'fkey command' by which function key or numeric key was pressed to trigger the command.")
- {
- ProfileScope(app, "project fkey command");
- User_Input input = get_current_input(app);
- b32 got_ind = false;
- i32 ind = 0;
- if (input.event.kind == InputEventKind_KeyStroke){
- if (KeyCode_F1 <= input.event.key.code && input.event.key.code <= KeyCode_F16){
- ind = (input.event.key.code - KeyCode_F1);
- got_ind = true;
- }
- else if (KeyCode_1 <= input.event.key.code && input.event.key.code <= KeyCode_9){
- ind = (input.event.key.code - '1');
- got_ind = true;
- }
- else if (input.event.key.code == KeyCode_0){
- ind = 9;
- got_ind = true;
- }
- if (got_ind){
- prj_exec_command_fkey_index(app, ind);
- }
- }
- }
+ // NOTE(nasr): project_fkey_command is defined in the nasr layer (4coder_byp_build.cpp), which
+ // runs the command in the footer build panel; forward declared in 4coder_byp.cpp
 
  CUSTOM_COMMAND_SIG(project_go_to_root_directory)
  CUSTOM_DOC("Changes 4coder's hot directory to the root directory of the currently loaded project. With no loaded project nothing hapepns.")

@@ -47,7 +47,7 @@ nasr_open_compilation_panel(Application_Links *app, View_ID editor_view){
  view_set_active(app, editor_view);
 }
 
-CUSTOM_COMMAND_SIG(byp_startup)
+CUSTOM_COMMAND_SIG(startup)
 CUSTOM_DOC("Responding to a startup event")
 {
  ProfileScope(app, "byp startup");
@@ -159,7 +159,7 @@ CUSTOM_DOC("Responding to a startup event")
  byp_tick_colors(app, frame_info);
  TAB_tick_inner(app, frame_info);
 
- vim_cursor_blink += frame_info.animation_dt;
+ vim_advance_cursor_blink(frame_info);
 
  b32 enable_virtual_whitespace = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
  if(enable_virtual_whitespace != def_enable_virtual_whitespace){
@@ -352,6 +352,14 @@ CUSTOM_DOC("Responding to a startup event")
 
  vim_file_save(app, buffer_id);
 
+ // NOTE(nasr): the language is cached per buffer from its file name; forget it on save so a
+ // save under another extension is picked up (recomputed lazily on the next lookup)
+ {
+ Managed_Scope scope = buffer_get_managed_scope(app, buffer_id);
+ Nasr_Language *lang = scope_attachment(app, scope, buffer_nasr_language, Nasr_Language);
+ if(lang != 0){ *lang = NasrLang_Unknown; }
+ }
+
  Scratch_Block scratch(app);
  String_Const_u8 path = push_buffer_file_name(app, scratch, buffer_id);
  String_Const_u8 name = string_front_of_path(path);
@@ -374,7 +382,7 @@ CUSTOM_DOC("Responding to a startup event")
 
  if (string_match(name, string_u8_litexpr("config.4coder"))){
  View_ID view = get_active_view(app, Access_Always);
- view_enqueue_command_function(app, view, byp_reload_config);
+ view_enqueue_command_function(app, view, reload_config);
  }
 
  if (string_match(name, string_u8_litexpr("project.4coder"))){

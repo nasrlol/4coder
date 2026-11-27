@@ -123,7 +123,11 @@ char *gl__fragment = R"foo(
         float has_thickness = (step(0.49, half_thickness));
         float does_not_have_thickness = 1.0 - has_thickness;
 
-        float sample_value = texture(sampler, uvw).r;
+        // Text weight boost: raise glyph coverage to 1/gamma to compensate for
+        // non-gamma-correct blending making light-on-dark text look thin.
+        // 1.0 = original; ~1.3-1.8 = progressively bolder.
+        const float text_gamma = 1.5;
+        float sample_value = pow(texture(sampler, uvw).r, 1.0/text_gamma);
         sample_value *= does_not_have_thickness;
 
         vec2 center = uvw.xy;

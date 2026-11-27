@@ -12,6 +12,7 @@
 
 #include "4coder_folds.hpp"
 #include "4coder_vim_commands.cpp"
+#include "4coder_vim_window.cpp"
 #include "4coder_nasr_vim_multiline.cpp"
 #include "4coder_vim_bindings.cpp"
 #include "4coder_vim.cpp"

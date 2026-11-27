@@ -968,6 +968,29 @@ code_index_get_nest_(Code_Index_Nest_Ptr_Array *array, i64 pos){
  return(result);
  }
 
+ // NOTE(nasr): `extern "C" {` is not a real scope; step past it so the declarations inside are
+ // indexed as top level (vulkan_core.h and wayland-client-core.h wrap the whole file in one).
+ // The matching `}` is a stray ScopeClose that the top level loop already steps over.
+ function b32
+ cpp_skip_extern_c_open(Code_Index_File *index, Generic_Parse_State *state){
+ Token_Iterator_Array restore = state->it;
+ generic_parse_inc(state);
+ generic_parse_skip_soft_tokens(index, state);
+ Token *str = token_it_read(&state->it);
+ if (str != 0 && str->sub_kind == TokenCppKind_LiteralString){
+ generic_parse_inc(state);
+ generic_parse_skip_soft_tokens(index, state);
+ Token *open = token_it_read(&state->it);
+ if (open != 0 && open->kind == TokenBaseKind_ScopeOpen){
+ generic_parse_inc(state);
+ return(true);
+ }
+ }
+ state->it = restore;
+ state->finished = false;
+ return(false);
+ }
+
  function b32
  generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *state, i32 limit){
  b32 result = false;
@@ -987,6 +1010,8 @@ code_index_get_nest_(Code_Index_Nest_Ptr_Array *array, i64 pos){
  Code_Index_Nest *nest = generic_parse_preprocessor(index, state);
  code_index_push_nest(&index->nest_list, nest);
  }
+ else if (state->do_cpp_parse && token->sub_kind == TokenCppKind_Extern &&
+ cpp_skip_extern_c_open(index, state)){ }
  else if (token->kind == TokenBaseKind_ScopeOpen){
  Code_Index_Nest *nest = generic_parse_scope(index, state);
  code_index_push_nest(&index->nest_list, nest);

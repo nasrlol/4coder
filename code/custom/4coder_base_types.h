@@ -234,6 +234,10 @@ enum{
 #define __VA_OPT__(x)
 #endif
 
+// NOTE(nasr): memmove/memset/memcmp for block_copy/block_zero/block_match; included before
+// `function` is defined so the macro can't touch the system header
+#include <string.h>
+
 #define function static
 #define api(x)
 

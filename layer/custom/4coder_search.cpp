@@ -200,11 +200,8 @@ print_string_match_list_to_buffer(Application_Links *app, Buffer_ID out_buffer_i
   list_all_locations__generic_identifier(app, ListAllLocationsFlag_CaseSensitive|ListAllLocationsFlag_MatchSubstring);
   }
 
-  CUSTOM_COMMAND_SIG(list_all_locations_of_selection)
-  CUSTOM_DOC("Reads the string in the selected range and lists all exact case-sensitive mathces in all open buffers.")
-  {
-  list_all_locations__generic_view_range(app, ListAllLocationsFlag_CaseSensitive);
-  }
+  // NOTE(nasr): list_all_locations_of_selection is defined in the nasr layer
+  // (4coder_byp_commands.cpp): it includes the char under the cursor like vim selections do
 
   CUSTOM_COMMAND_SIG(list_all_locations_of_selection_case_insensitive)
   CUSTOM_DOC("Reads the string in the selected range and lists all exact case-insensitive mathces in all open buffers.")

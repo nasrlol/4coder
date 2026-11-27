@@ -18,14 +18,44 @@ nasr_note_body_is(Token_Array *tokens, i64 from, i64 open_pos){
  return(false);
 }
 
+// NOTE(nasr): the search below scans every note in the file for each enclosing scope, and the
+// file bar asks every frame for every view. The answer only changes when the cursor moves, the
+// buffer is edited, or it is re-lexed / re-indexed, so cache it on exactly those (a few slots so
+// two visible views don't evict each other).
+struct Nasr_Which_Function_Cache{
+ b32 used;
+ Buffer_ID buffer;
+ i64 pos;
+ History_Record_Index history;
+ Token *tokens;
+ i64 token_count;
+ Code_Index_File *file;
+ Code_Index_Note **notes;
+ i32 note_count;
+ u64 size;
+ u8 name[128];
+};
+global Nasr_Which_Function_Cache nasr_which_function_cache[4];
+global i32 nasr_which_function_cache_next;
+
 function String_Const_u8
 nasr_which_function(Application_Links *app, Arena *arena, Buffer_ID buffer, i64 pos){
  String_Const_u8 result = {};
  Token_Array tokens = get_token_array_from_buffer(app, buffer);
  if (tokens.tokens == 0){ return(result); }
+ History_Record_Index history = buffer_history_get_current_state_index(app, buffer);
  code_index_lock();
  Code_Index_File *file = code_index_get_file(buffer);
  if (file != 0){
+  for (i32 i = 0; i < ArrayCount(nasr_which_function_cache); i += 1){
+   Nasr_Which_Function_Cache *c = nasr_which_function_cache + i;
+   if (c->used && c->buffer == buffer && c->pos == pos && c->history == history &&
+       c->tokens == tokens.tokens && c->token_count == tokens.count && c->file == file &&
+       c->notes == file->note_array.ptrs && c->note_count == file->note_array.count){
+    code_index_unlock();
+    return(push_string_copy(arena, SCu8(c->name, c->size)));
+   }
+  }
   for (Code_Index_Nest *nest = code_index_get_nest(file, pos); nest != 0; nest = nest->parent){
    if (nest->kind != CodeIndexNest_Scope){ continue; }
    Code_Index_Note *best = 0;
@@ -41,6 +71,20 @@ nasr_which_function(Application_Links *app, Arena *arena, Buffer_ID buffer, i64 
     break;
    }
   }
+  // the file bar truncates past 40 chars, so keeping the first 128 is enough
+  Nasr_Which_Function_Cache *c = nasr_which_function_cache + nasr_which_function_cache_next;
+  nasr_which_function_cache_next = (nasr_which_function_cache_next + 1) % ArrayCount(nasr_which_function_cache);
+  c->used = true;
+  c->buffer = buffer;
+  c->pos = pos;
+  c->history = history;
+  c->tokens = tokens.tokens;
+  c->token_count = tokens.count;
+  c->file = file;
+  c->notes = file->note_array.ptrs;
+  c->note_count = file->note_array.count;
+  c->size = Min(result.size, sizeof(c->name));
+  block_copy(c->name, result.str, c->size);
  }
  code_index_unlock();
  return(result);
@@ -522,10 +566,6 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  global_cursor_rect.y1,
  };
 
-#if 0
- nasr_draw_struct_context(app, buffer, &tokens, pos, face, padding, view_rect, &tooltip_position);
-#endif
-
  // NOTE(BYP): Inside `return ...;`, show the enclosing function's signature (for its return type).
  Range_i64 enclosing_name = {};
  if(nasr_pos_in_return_statement(app, buffer, &tokens, pos) &&
@@ -538,23 +578,29 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  Token_Iterator_Array it = token_iterator_pos(0, &tokens, pos);
  i32 paren_nest = 0;
  i32 arg_idx = 0;
- for(i32 i = 0, calls_found = 0; calls_found < 4; i += 1)
+ // NOTE(nasr): runs every frame, so the backwards walk is capped
+ for(i32 i = 0, calls_found = 0; calls_found < 4 && i < 4096; i += 1)
  {
  Token *token = token_it_read(&it);
  if(token == 0){ break; }
 
- if(paren_nest == 0 &&
- token->kind == TokenBaseKind_ParentheticalOpen &&
- token_it_dec_non_whitespace(&it))
+ if(paren_nest == 0 && token->kind == TokenBaseKind_ParentheticalOpen)
  {
- Token *name = token_it_read(&it);
+ // peek at the name on a copy: if it isn't an identifier (`foo((x|`), the outer `(`
+ // still has to be visited by the normal step below
+ Token_Iterator_Array peek = it;
+ if(token_it_dec_non_whitespace(&peek))
+ {
+ Token *name = token_it_read(&peek);
  if(name && name->kind == TokenBaseKind_Identifier)
  {
  String_Const_u8 query = push_buffer_range(app, scratch, buffer, Ii64(name));
  nasr_draw_pos_context_call(app, face, metrics, padding, view_rect, &tooltip_position, query, arg_idx);
  calls_found += 1;
- arg_idx = 0;
+ it = peek;
  }
+ }
+ arg_idx = 0;
  }
  else if(token->kind == TokenBaseKind_ParentheticalOpen)
  {
@@ -651,14 +697,14 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
  u8 *text = push_buffer_range(app, scratch, buffer_id, visible_range).str;
  foreach(i, range_size(visible_range)-9){
- byp_hex_scan:
  if(text[i] != '0' || text[i+1] != 'x'){ continue; }
+ i32 bad = -1;
  foreach(j, 8){
  char c = text[i+2+j];
- if(!('0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F')){
- i+=9; goto byp_hex_scan;
+ if(!('0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F')){ bad = j; break; }
  }
- }
+ // NOTE: the digit before the bad char can be the '0' of a new 0x, resume on it
+ if(bad >= 0){ i += bad; continue; }
  Range_i64 hex_range = Ii64_size(i+visible_range.min, 10);
  u32 c = u32(string_to_integer(SCu8(text+i+2, 8), 16));
  f32 avg = (((c >> 16) & 0xFF) + ((c >> 8) & 0xFF) + (c & 0xFF))/3.f;
@@ -753,10 +799,10 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  Token_Iterator_Array it = token_iterator_pos(0, &token_array, pos);
  Token *token = token_it_read(&it);
 
- if(token->kind == TokenBaseKind_ScopeOpen){ pos = token->pos + token->size; }
+ if(token != 0 && token->kind == TokenBaseKind_ScopeOpen){ pos = token->pos + token->size; }
  else if(token_it_dec_all(&it)){
  token = token_it_read(&it);
- if(token->kind == TokenBaseKind_ScopeClose && pos == token->pos + token->size){
+ if(token != 0 && token->kind == TokenBaseKind_ScopeClose && pos == token->pos + token->size){
  pos = token->pos;
  }
  }
@@ -773,7 +819,10 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
 
  f32 wid = 2.f;
  f32 x_off = rect_width(text_layout_character_on_screen(app, text_layout_id, pos)) + 1.f;
+ // NOTE(nasr): at top level there are no enclosing scopes and ranges[0] is unpushed scratch
+ if(ranges.count > 0){
  draw_scope_range(app, view, buffer, text_layout_id, ranges.ranges[0], x_off, wid, fcolor_id(defcolor_preproc));
+ }
  for(i32 i=1; i<ranges.count; i++){
  Range_i64 range = ranges.ranges[i];
  draw_scope_range(app, view, buffer, text_layout_id, range, x_off, wid, fcolor_id(defcolor_ghost_character));
@@ -1043,6 +1092,39 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  String_Const_u8 suffix;
  };
 
+ // NOTE(nasr): the word completer's first candidate is the match nearest the typed prefix
+ // (get_complete_list_raw: up/down lists merged by range_distance), found by scanning the whole
+ // buffer. Scan only +-R around the prefix instead: anything outside the window is more than
+ // R - needle.size away, so an in-window match closer than that is exactly the full scan's
+ // first result. Returns false when that can't be proven (caller falls back to the full scan).
+ function b32
+ nasr_nearest_word_completion(Application_Links *app, Arena *arena, Buffer_ID buffer,
+                              Range_i64 needle_range, String_Const_u8 *out){
+ Character_Predicate *pred = &character_predicate_alpha_numeric_underscore_utf8;
+ i64 R = KB(64);
+ i64 size = buffer_get_size(app, buffer);
+ Range_i64 window = Ii64(Max(0, needle_range.min - R), Min(size, needle_range.max + R));
+ b32 whole_buffer = (window.min == 0 && window.max == size);
+
+ String_Const_u8 needle = push_buffer_range(app, arena, buffer, needle_range);
+ String_Match_List up = buffer_find_all_matches(app, arena, buffer, 0, Ii64(window.min, needle_range.min),
+                                                needle, pred, Scan_Backward);
+ String_Match_List down = buffer_find_all_matches(app, arena, buffer, 0, Ii64(needle_range.max, window.max),
+                                                  needle, pred, Scan_Forward);
+ string_match_list_filter_flags(&up, complete_must, complete_must_not);
+ string_match_list_filter_flags(&down, complete_must, complete_must_not);
+ String_Match_List list = string_match_list_merge_nearest(&up, &down, needle_range);
+ if(list.first == 0){ return false; }
+
+ // strict, with a 1 byte margin: matches at the window edge may see the edge as a word boundary
+ i64 dist = range_distance(list.first->range, needle_range);
+ if(!whole_buffer && dist >= R - (i64)needle.size - 1){ return false; }
+
+ Range_i64 word = right_enclose_alpha_numeric_underscore_utf8(app, buffer, list.first->range);
+ *out = push_buffer_range(app, arena, buffer, word);
+ return true;
+ }
+
  function String_Const_u8
  nasr_complete_preview_suffix(Application_Links *app, Buffer_ID buffer, i64 pos){
  local_persist Nasr_Complete_Preview cache = {};
@@ -1060,10 +1142,15 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  cache.history = history;
  cache.suffix = {};
 
- // only at the end of a word that's followed by whitespace or the line end, so the ghost
- // text never draws over real characters
- u8 next = buffer_get_char(app, buffer, pos);
- if(pos < size && !character_is_whitespace(next)){ return cache.suffix; }
+ // only when nothing but whitespace follows on the line, so the ghost text never draws over
+ // real characters (`foo| bar`)
+ {
+  Scratch_Block rest_scratch(app);
+  String_Const_u8 rest = push_buffer_range(app, rest_scratch, buffer, Ii64(pos, get_line_end_pos_from_pos(app, buffer, pos)));
+  for(u64 k = 0; k < rest.size; k += 1){
+   if(!character_is_whitespace(rest.str[k])){ return cache.suffix; }
+  }
+ }
  if(arena.base_allocator == 0){ arena = make_arena_system(); }
 
  // struct members first: after `.` / `->` they're the only sensible completion
@@ -1075,10 +1162,18 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  if(members.match_count == 0){ return cache.suffix; }
  word = members.matches[0];
  needle_size = (u64)range_size(members.needle);
+ // the preview slices the suffix after what was typed; if the case differs Tab would
+ // rewrite the typed part too, which the ghost text can't show
+ String_Const_u8 typed = push_buffer_range(app, scratch, buffer, members.needle);
+ if(word.size < needle_size || !string_match(string_prefix(word, needle_size), typed)){ return cache.suffix; }
  }
  else{
  Range_i64 needle = get_word_complete_needle_range(app, buffer, pos);
  if(range_size(needle) < 2){ return cache.suffix; }
+ needle_size = (u64)range_size(needle);
+ // fast path: nearest match within a window around the cursor (provably the same first
+ // result as the full scan); otherwise the full iterator, which also covers other buffers
+ if(!nasr_nearest_word_completion(app, scratch, buffer, needle, &word)){
  if(it.already_used_table.allocator != 0){
  end_temp(it.arena_restore);
  table_free(&it.already_used_table);
@@ -1090,7 +1185,7 @@ nasr_draw_file_bar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Fa
  word_complete_iter_next(&it);
  if(word_complete_iter_is_at_base_slot(&it)){ return cache.suffix; }
  word = word_complete_iter_read(&it);
- needle_size = (u64)range_size(needle);
+ }
  }
  if(word.size <= needle_size){ return cache.suffix; }
  u64 count = Min(word.size - needle_size, sizeof(cache.suffix_space));
